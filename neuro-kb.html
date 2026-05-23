@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>神经内科知识库</title>
+
+<!-- PWA：独立运行所需的系统标识 -->
+<meta name="theme-color" content="#0c5b5e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="神内知识库">
+<!-- iOS 主屏图标（内联 SVG，base64） -->
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMGM1YjVlIi8+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjNlZmU2IiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGNpcmNsZSBjeD0iOTAiIGN5PSI1OCIgcj0iMTYiLz48Y2lyY2xlIGN4PSI1NCIgY3k9IjEwNCIgcj0iMTQiLz48Y2lyY2xlIGN4PSIxMjYiIGN5PSIxMDQiIHI9IjE0Ii8+PGNpcmNsZSBjeD0iOTAiIGN5PSIxNDAiIHI9IjEzIi8+PHBhdGggZD0iTTkwIDc0djI2TTc4IDY4IDY0IDkyTTEwMiA2OCAxMTYgOTJNNjYgMTE2bDIwIDE4TTExNCAxMTYgOTQgMTM0Ii8+PC9nPjwvc3ZnPg==">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f3efe6; --card:#fbf9f4; --ink:#211f1b; --muted:#8b8377;
+    --line:#e3ddcf; --accent:#0c5b5e; --accent-soft:#e4ede9;
+    --user:#1f3d3e; --warn:#a8442a;
+    --sans:'Hanken Grotesk',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+    --serif:'Newsreader','Songti SC','PingFang SC',serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:var(--sans);background:var(--paper);color:var(--ink);
+    font-size:16px;line-height:1.6;overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{display:flex;flex-direction:column;height:100dvh;}
+
+  header{
+    padding:calc(env(safe-area-inset-top) + 14px) 20px 12px;
+    border-bottom:1px solid var(--line);background:var(--card);flex-shrink:0;
+  }
+  header h1{font-family:var(--serif);font-weight:500;font-size:21px;letter-spacing:.2px;}
+  header h1 em{font-style:italic;color:var(--accent);}
+  header .sub{font-size:12px;color:var(--muted);margin-top:1px;}
+
+  .view{flex:1;overflow-y:auto;display:none;-webkit-overflow-scrolling:touch;}
+  .view.active{display:flex;flex-direction:column;}
+
+  #chatScroll{flex:1;overflow-y:auto;padding:18px 16px 8px;}
+
+  #chatBar{flex-shrink:0;display:none;justify-content:flex-end;padding:8px 14px 0;}
+  #chatBar.show{display:flex;}
+  #newChatBtn{background:none;border:1px solid var(--line);border-radius:8px;
+    padding:5px 12px;font-family:var(--sans);font-size:12px;color:var(--muted);
+    cursor:pointer;}
+  .msg{margin-bottom:18px;display:flex;flex-direction:column;}
+  .msg .who{font-size:11px;color:var(--muted);margin-bottom:4px;letter-spacing:.5px;text-transform:uppercase;}
+  .bubble{padding:12px 15px;border-radius:14px;font-size:15.5px;line-height:1.65;
+    white-space:pre-wrap;word-break:break-word;}
+  .msg.user{align-items:flex-end;}
+  .msg.user .bubble{background:var(--user);color:#f3efe6;border-bottom-right-radius:4px;max-width:85%;}
+  .msg.bot .bubble{background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px;}
+  .msg.bot .bubble.err{background:#f7e9e4;border-color:#e6c7bc;color:var(--warn);}
+  .src{margin-top:7px;font-size:11.5px;color:var(--muted);
+    display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+  .src .tag{background:var(--accent-soft);color:var(--accent);
+    padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
+  .empty-hint{text-align:center;color:var(--muted);font-family:var(--serif);
+    font-style:italic;font-size:16px;margin:auto;padding:40px 30px;line-height:1.7;}
+  .typing{display:flex;gap:4px;padding:4px 2px;}
+  .typing span{width:7px;height:7px;border-radius:50%;background:var(--muted);
+    animation:bounce 1.2s infinite ease-in-out;}
+  .typing span:nth-child(2){animation-delay:.15s;}
+  .typing span:nth-child(3){animation-delay:.3s;}
+  @keyframes bounce{0%,80%,100%{opacity:.25;transform:translateY(0);}40%{opacity:1;transform:translateY(-4px);}}
+
+  #inputBar{flex-shrink:0;border-top:1px solid var(--line);background:var(--card);
+    padding:10px 12px calc(env(safe-area-inset-bottom) + 10px);
+    display:flex;gap:8px;align-items:flex-end;}
+  #qInput{flex:1;border:1px solid var(--line);background:var(--paper);border-radius:12px;
+    padding:11px 13px;font-family:var(--sans);font-size:15.5px;resize:none;
+    max-height:120px;line-height:1.5;color:var(--ink);}
+  #qInput:focus{outline:none;border-color:var(--accent);}
+  .send-btn{flex-shrink:0;width:44px;height:44px;border-radius:12px;border:none;
+    background:var(--accent);color:#fff;font-size:19px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;}
+  .send-btn:disabled{background:var(--muted);opacity:.5;}
+
+  .kb-wrap{padding:16px 16px 90px;}
+  .kb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .kb-top .count{font-size:13px;color:var(--muted);}
+  .add-btn{border:none;background:var(--accent);color:#fff;border-radius:10px;
+    padding:8px 14px;font-family:var(--sans);font-size:13.5px;font-weight:600;cursor:pointer;}
+  .kb-item{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:13px 15px;margin-bottom:10px;}
+  .kb-item h3{font-family:var(--serif);font-weight:500;font-size:16.5px;margin-bottom:3px;}
+  .kb-item p{font-size:13.5px;color:var(--muted);line-height:1.55;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .kb-item .acts{display:flex;gap:14px;margin-top:9px;}
+  .kb-item .acts button{background:none;border:none;font-family:var(--sans);font-size:12.5px;
+    color:var(--accent);cursor:pointer;padding:0;font-weight:600;}
+  .kb-item .acts button.del{color:var(--warn);}
+
+  .set-wrap{padding:18px 18px 90px;}
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}
+  .field .desc{font-size:12px;color:var(--muted);margin-bottom:7px;line-height:1.5;}
+  .field input,.field select,.field textarea{
+    width:100%;border:1px solid var(--line);background:var(--card);border-radius:10px;
+    padding:11px 13px;font-family:var(--sans);font-size:15px;color:var(--ink);}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);}
+  .prov-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .prov-grid button{
+    flex:1 1 28%;border:1px solid var(--line);background:var(--card);border-radius:10px;
+    padding:10px 4px;font-family:var(--sans);font-size:13px;cursor:pointer;color:var(--muted);}
+  .prov-grid button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;}
+  .model-row{display:flex;gap:8px;}
+  .model-row input{flex:1;}
+  .refresh-btn{flex-shrink:0;border:1px solid var(--line);background:var(--card);
+    border-radius:10px;padding:0 14px;font-family:var(--sans);font-size:13px;
+    color:var(--accent);font-weight:600;cursor:pointer;white-space:nowrap;}
+  .refresh-btn:disabled{color:var(--muted);opacity:.6;}
+  .model-hint{font-size:11.5px;color:var(--muted);margin-top:6px;min-height:15px;}
+  .save-btn{width:100%;border:none;background:var(--accent);color:#fff;border-radius:11px;
+    padding:13px;font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;}
+  .saved-flash{text-align:center;color:var(--accent);font-size:13px;margin-top:10px;height:16px;}
+
+  nav{flex-shrink:0;display:flex;border-top:1px solid var(--line);background:var(--card);
+    padding-bottom:env(safe-area-inset-bottom);}
+  nav button{flex:1;background:none;border:none;padding:9px 0 8px;cursor:pointer;
+    font-family:var(--sans);font-size:11px;color:var(--muted);
+    display:flex;flex-direction:column;align-items:center;gap:3px;}
+  nav button .ico{font-size:19px;line-height:1;}
+  nav button.on{color:var(--accent);font-weight:600;}
+
+  .modal-bg{position:fixed;inset:0;background:rgba(33,31,27,.45);z-index:50;
+    display:none;align-items:flex-end;}
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--paper);width:100%;border-radius:18px 18px 0 0;
+    padding:20px 18px calc(env(safe-area-inset-bottom) + 18px);max-height:88dvh;overflow-y:auto;}
+  .modal h2{font-family:var(--serif);font-weight:500;font-size:19px;margin-bottom:16px;}
+  .modal textarea{min-height:140px;resize:vertical;line-height:1.6;}
+  .modal-acts{display:flex;gap:10px;margin-top:6px;}
+  .modal-acts button{flex:1;border-radius:10px;padding:12px;font-family:var(--sans);
+    font-size:14.5px;font-weight:600;cursor:pointer;}
+  .btn-cancel{background:var(--card);border:1px solid var(--line);color:var(--muted);}
+  .btn-ok{background:var(--accent);border:none;color:#fff;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>神经<em>内科</em>知识库</h1>
+    <div class="sub" id="statusLine">— 个人查询助手 —</div>
+  </header>
+
+  <section class="view active" id="view-chat">
+    <div id="chatBar"><button id="newChatBtn">＋ 新对话</button></div>
+    <div id="chatScroll">
+      <div class="empty-hint" id="chatEmpty">
+        在下方提出你的神经内科问题。<br>回答会优先依据你自己录入的知识库，并标注引用来源。
+      </div>
+    </div>
+    <div id="inputBar">
+      <textarea id="qInput" rows="1" placeholder="提一个问题…"></textarea>
+      <button class="send-btn" id="sendBtn">↑</button>
+    </div>
+  </section>
+
+  <section class="view" id="view-kb">
+    <div class="kb-wrap">
+      <div class="kb-top">
+        <span class="count" id="kbCount">共 0 条</span>
+        <button class="add-btn" id="addKbBtn">＋ 新增条目</button>
+      </div>
+      <div id="kbList"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-set">
+    <div class="set-wrap">
+      <div class="field">
+        <label>模型提供方</label>
+        <div class="desc">每个提供方的密钥会分开记住，切换时不会丢。</div>
+        <div class="prov-grid" id="provGrid"></div>
+      </div>
+      <div class="field" id="baseField" style="display:none;">
+        <label>接口地址（Base URL）</label>
+        <div class="desc">填写兼容 OpenAI 格式的接口根地址，通常以 /v1 结尾。</div>
+        <input type="text" id="baseUrl" placeholder="https://...">
+      </div>
+      <div class="field">
+        <label>API 密钥</label>
+        <div class="desc">密钥只保存在本机，不会上传到任何地方。</div>
+        <input type="password" id="apiKey" placeholder="粘贴你的 API Key">
+      </div>
+      <div class="field">
+        <label>模型名称</label>
+        <div class="desc">点「获取列表」自动拉取该平台可用模型，也可直接手填。</div>
+        <div class="model-row">
+          <input type="text" id="modelName" list="modelList" placeholder="默认" autocomplete="off">
+          <button class="refresh-btn" id="fetchModelsBtn">获取列表</button>
+        </div>
+        <datalist id="modelList"></datalist>
+        <div class="model-hint" id="modelHint"></div>
+      </div>
+      <button class="save-btn" id="saveSetBtn">保存设置</button>
+      <div class="saved-flash" id="savedFlash"></div>
+    </div>
+  </section>
+
+  <nav>
+    <button class="on" data-v="chat"><span class="ico">✦</span>查询</button>
+    <button data-v="kb"><span class="ico">❑</span>知识库</button>
+    <button data-v="set"><span class="ico">⚙</span>设置</button>
+  </nav>
+</div>
+
+<div class="modal-bg" id="kbModal">
+  <div class="modal">
+    <h2 id="kbModalTitle">新增条目</h2>
+    <div class="field">
+      <label>标题</label>
+      <input type="text" id="kbTitle" placeholder="如：急性缺血性卒中 — 溶栓时间窗">
+    </div>
+    <div class="field">
+      <label>内容</label>
+      <textarea id="kbContent" placeholder="录入这条知识的正文…"></textarea>
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" id="kbCancel">取消</button>
+      <button class="btn-ok" id="kbSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- 模型提供方配置 ---------- */
+const PROVIDERS = {
+  claude:   { label:"Claude",   type:"anthropic", base:"https://api.anthropic.com",                       model:"claude-sonnet-4-6" },
+  openai:   { label:"GPT",      type:"openai",    base:"https://api.openai.com/v1",                        model:"gpt-4o" },
+  gemini:   { label:"Gemini",   type:"gemini",    base:"https://generativelanguage.googleapis.com/v1beta", model:"gemini-2.0-flash" },
+  deepseek: { label:"DeepSeek", type:"openai",    base:"https://api.deepseek.com/v1",                      model:"deepseek-chat" },
+  qwen:     { label:"通义千问", type:"openai",    base:"https://dashscope.aliyuncs.com/compatible-mode/v1", model:"qwen-plus" },
+  grok:     { label:"Grok",     type:"openai",    base:"https://api.x.ai/v1",                              model:"grok-4" },
+  custom:   { label:"自定义",   type:"openai",    base:"",                                                 model:"" }
+};
+const PROV_KEYS = Object.keys(PROVIDERS);
+
+/* ---------- 存储层：优先环境持久化，回退 localStorage ---------- */
+const Store = {
+  async get(k){
+    try{ if(window.storage){ const r=await window.storage.get(k); return r?r.value:null; } }catch(e){}
+    try{ return localStorage.getItem(k); }catch(e){ return null; }
+  },
+  async set(k,v){
+    try{ if(window.storage){ await window.storage.set(k,v,false); return; } }catch(e){}
+    try{ localStorage.setItem(k,v); }catch(e){}
+  }
+};
+
+/* ---------- 状态 ---------- */
+let settings = { provider:"claude", keys:{}, models:{}, customBase:"" };
+let knowledge = [];
+let messages = [];
+let editingId = null;
+let busy = false;
+
+/* ---------- 初始化 ---------- */
+async function init(){
+  const s = await Store.get("nkb_settings");
+  if(s){
+    try{
+      const o = JSON.parse(s);
+      // 兼容旧版本格式 {provider,key,model}
+      if(o.key!==undefined && !o.keys){
+        settings.provider = o.provider || "claude";
+        settings.keys = {}; settings.models = {};
+        if(o.key) settings.keys[settings.provider] = o.key;
+        if(o.model) settings.models[settings.provider] = o.model;
+      }else{
+        settings = Object.assign({provider:"claude",keys:{},models:{},customBase:""}, o);
+      }
+    }catch(e){}
+  }
+  const k = await Store.get("nkb_knowledge");
+  if(k){ try{ knowledge = JSON.parse(k)||[]; }catch(e){} }
+  buildProvGrid();
+  renderSettings();
+  renderKb();
+  refreshStatus();
+}
+
+function refreshStatus(){
+  const el = document.getElementById("statusLine");
+  const key = settings.keys[settings.provider];
+  if(!key){
+    el.textContent = "未配置模型 — 请到「设置」填入密钥";
+    el.style.color = "var(--warn)";
+  }else{
+    el.textContent = `已连接 ${PROVIDERS[settings.provider].label} · 知识库 ${knowledge.length} 条`;
+    el.style.color = "var(--muted)";
+  }
+}
+
+/* ---------- 视图切换 ---------- */
+document.querySelectorAll("nav button").forEach(b=>{
+  b.addEventListener("click",()=>{
+    document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    document.getElementById("view-"+b.dataset.v).classList.add("active");
+  });
+});
+
+/* ---------- 设置 ---------- */
+function buildProvGrid(){
+  const grid = document.getElementById("provGrid");
+  grid.innerHTML = "";
+  PROV_KEYS.forEach(p=>{
+    const b = document.createElement("button");
+    b.textContent = PROVIDERS[p].label;
+    b.dataset.p = p;
+    b.addEventListener("click",()=>{
+      captureFields();          // 先存住当前提供方已填内容
+      settings.provider = p;
+      renderSettings();
+    });
+    grid.appendChild(b);
+  });
+}
+function captureFields(){
+  const cur = settings.provider;
+  settings.keys[cur] = document.getElementById("apiKey").value.trim();
+  settings.models[cur] = document.getElementById("modelName").value.trim();
+  if(cur==="custom") settings.customBase = document.getElementById("baseUrl").value.trim();
+}
+function renderSettings(){
+  document.querySelectorAll("#provGrid button").forEach(b=>{
+    b.classList.toggle("on", b.dataset.p===settings.provider);
+  });
+  const cur = settings.provider;
+  document.getElementById("apiKey").value = settings.keys[cur] || "";
+  document.getElementById("modelName").value = settings.models[cur] || "";
+  const baseField = document.getElementById("baseField");
+  if(cur==="custom"){
+    baseField.style.display = "block";
+    document.getElementById("baseUrl").value = settings.customBase || "";
+    document.getElementById("modelName").placeholder = "必填，如 gpt-4o";
+  }else{
+    baseField.style.display = "none";
+    document.getElementById("modelName").placeholder = "默认：" + PROVIDERS[cur].model;
+  }
+  document.getElementById("modelList").innerHTML = "";
+  setModelHint("");
+}
+document.getElementById("saveSetBtn").addEventListener("click", async ()=>{
+  captureFields();
+  await Store.set("nkb_settings", JSON.stringify(settings));
+  refreshStatus();
+  const f = document.getElementById("savedFlash");
+  f.textContent = "✓ 已保存";
+  setTimeout(()=>{ f.textContent=""; }, 2000);
+});
+
+/* ---------- 自动获取模型列表 ---------- */
+function setModelHint(text, warn){
+  const h = document.getElementById("modelHint");
+  h.textContent = text || "";
+  h.style.color = warn ? "var(--warn)" : "var(--muted)";
+}
+function fillModelList(ids){
+  const dl = document.getElementById("modelList");
+  dl.innerHTML = "";
+  ids.forEach(id=>{
+    const o = document.createElement("option");
+    o.value = id;
+    dl.appendChild(o);
+  });
+}
+async function fetchModels(){
+  captureFields();
+  const prov = PROVIDERS[settings.provider];
+  const key = settings.keys[settings.provider] || "";
+  let base = settings.provider==="custom" ? (settings.customBase||"") : prov.base;
+  base = base.replace(/\/+$/,"");
+  if(!key){ setModelHint("请先填写 API 密钥再获取列表。", true); return; }
+  if(settings.provider==="custom" && !base){ setModelHint("自定义提供方需先填接口地址。", true); return; }
+
+  const btn = document.getElementById("fetchModelsBtn");
+  btn.disabled = true; btn.textContent = "获取中…";
+  setModelHint("正在拉取模型列表…", false);
+
+  try{
+    let ids = [];
+    if(prov.type==="anthropic"){
+      const r = await fetch(base + "/v1/models",{
+        headers:{ "x-api-key":key, "anthropic-version":"2023-06-01",
+                  "anthropic-dangerous-direct-browser-access":"true" }
+      });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error?.message || ("请求失败 "+r.status));
+      ids = (d.data||[]).map(m=>m.id);
+    }else if(prov.type==="gemini"){
+      const r = await fetch(base + "/models?key=" + encodeURIComponent(key));
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error?.message || ("请求失败 "+r.status));
+      ids = (d.models||[])
+        .filter(m=>(m.supportedGenerationMethods||[]).includes("generateContent"))
+        .map(m=>(m.name||"").replace(/^models\//,""));
+    }else{
+      const r = await fetch(base + "/models",{
+        headers:{ "authorization":"Bearer "+key }
+      });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error?.message || ("请求失败 "+r.status));
+      ids = (d.data||[]).map(m=>m.id);
+    }
+    ids = [...new Set(ids)].filter(Boolean).sort();
+    if(ids.length===0){ setModelHint("接口返回空列表，请手动填写模型名。", true); }
+    else{
+      fillModelList(ids);
+      setModelHint("已获取 " + ids.length + " 个模型，点输入框可下拉选择。", false);
+    }
+  }catch(err){
+    setModelHint("获取失败：" + err.message + "（可直接手填模型名）", true);
+  }
+  btn.disabled = false; btn.textContent = "获取列表";
+}
+document.getElementById("fetchModelsBtn").addEventListener("click", fetchModels);
+
+/* ---------- 知识库 ---------- */
+function renderKb(){
+  const list = document.getElementById("kbList");
+  document.getElementById("kbCount").textContent = `共 ${knowledge.length} 条`;
+  list.innerHTML = "";
+  if(knowledge.length===0){
+    list.innerHTML = `<div class="empty-hint" style="padding:30px 10px;">
+      还没有知识条目。<br>点上方「新增条目」把你的笔记、要点录进来。</div>`;
+    return;
+  }
+  knowledge.forEach(item=>{
+    const div = document.createElement("div");
+    div.className = "kb-item";
+    div.innerHTML = `<h3></h3><p></p>
+      <div class="acts"><button class="edit">编辑</button><button class="del">删除</button></div>`;
+    div.querySelector("h3").textContent = item.title || "(无标题)";
+    div.querySelector("p").textContent = item.content || "";
+    div.querySelector(".edit").addEventListener("click",()=>openKbModal(item));
+    div.querySelector(".del").addEventListener("click",()=>delKb(item.id));
+    list.appendChild(div);
+  });
+}
+function openKbModal(item){
+  editingId = item ? item.id : null;
+  document.getElementById("kbModalTitle").textContent = item ? "编辑条目" : "新增条目";
+  document.getElementById("kbTitle").value = item ? item.title : "";
+  document.getElementById("kbContent").value = item ? item.content : "";
+  document.getElementById("kbModal").classList.add("show");
+}
+function closeKbModal(){ document.getElementById("kbModal").classList.remove("show"); }
+document.getElementById("addKbBtn").addEventListener("click",()=>openKbModal(null));
+document.getElementById("kbCancel").addEventListener("click",closeKbModal);
+document.getElementById("kbModal").addEventListener("click",e=>{
+  if(e.target.id==="kbModal") closeKbModal();
+});
+document.getElementById("kbSave").addEventListener("click", async ()=>{
+  const t = document.getElementById("kbTitle").value.trim();
+  const c = document.getElementById("kbContent").value.trim();
+  if(!t && !c){ closeKbModal(); return; }
+  if(editingId){
+    const it = knowledge.find(x=>x.id===editingId);
+    if(it){ it.title=t; it.content=c; }
+  }else{
+    knowledge.push({ id:"k"+Date.now(), title:t, content:c });
+  }
+  await Store.set("nkb_knowledge", JSON.stringify(knowledge));
+  closeKbModal(); renderKb(); refreshStatus();
+});
+async function delKb(id){
+  if(!confirm("删除这条知识？")) return;
+  knowledge = knowledge.filter(x=>x.id!==id);
+  await Store.set("nkb_knowledge", JSON.stringify(knowledge));
+  renderKb(); refreshStatus();
+}
+
+/* ---------- 检索：中文友好的二元字组匹配 ---------- */
+function bigrams(s){
+  s = (s||"").toLowerCase().replace(/[\s\p{P}\p{S}]+/gu,"");
+  const g=[];
+  for(let i=0;i<s.length-1;i++) g.push(s.slice(i,i+2));
+  return g;
+}
+function retrieve(query){
+  if(knowledge.length===0) return [];
+  if(knowledge.length<=6) return knowledge.slice();
+  const qg = [...new Set(bigrams(query))];
+  const scored = knowledge.map(e=>{
+    const text = ((e.title||"")+" "+(e.content||"")).toLowerCase();
+    let score = 0;
+    qg.forEach(g=>{ if(text.includes(g)) score++; });
+    return { e, score };
+  });
+  scored.sort((a,b)=>b.score-a.score);
+  const hit = scored.filter(x=>x.score>0).slice(0,5).map(x=>x.e);
+  return hit.length ? hit : knowledge.slice(0,3);
+}
+
+/* ---------- 提示词 ---------- */
+function buildSystemPrompt(used){
+  let p = "你是一位严谨的神经内科知识助手，服务对象是一名神经内科医生。";
+  if(used.length){
+    p += "请优先依据下面提供的【知识库摘录】回答问题。规则：\n"
+       + "1. 凡是用到知识库的内容，在相应位置用「条目标题」标注来源。\n"
+       + "2. 若知识库摘录不足以回答，明确写出「知识库未涵盖此点」，再基于通用医学知识谨慎补充，并注明该部分非来自知识库。\n"
+       + "3. 不得编造知识库中不存在的内容。回答简洁、专业、准确。\n\n【知识库摘录】\n";
+    used.forEach((e,i)=>{ p += `〔${i+1}〕${e.title||"无标题"}\n${e.content||""}\n\n`; });
+  }else{
+    p += "当前知识库为空或无相关条目。请基于通用医学知识谨慎回答，"
+       + "并在开头注明「以下回答来自通用知识，未基于个人知识库」。回答简洁、专业、准确。";
+  }
+  return p;
+}
+
+/* ---------- 模型调用（流式） ---------- */
+// onDelta(textChunk) 每收到一段文本就回调；返回完整文本
+async function callModel(system, history, onDelta){
+  const prov = PROVIDERS[settings.provider];
+  const key = settings.keys[settings.provider] || "";
+  const model = settings.models[settings.provider] || prov.model;
+  let base = settings.provider==="custom" ? (settings.customBase||"") : prov.base;
+  base = base.replace(/\/+$/,"");
+
+  if(settings.provider==="custom" && !base) throw new Error("自定义提供方需要先填写接口地址");
+  if(!model) throw new Error("请先在设置里填写模型名称");
+
+  let url, headers, body, parseSSE;
+
+  if(prov.type==="anthropic"){
+    url = base + "/v1/messages";
+    headers = {
+      "content-type":"application/json",
+      "x-api-key":key,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    };
+    body = JSON.stringify({ model, max_tokens:1500, system, stream:true,
+      messages:history.map(m=>({role:m.role,content:m.content})) });
+    parseSSE = (obj)=>{
+      if(obj.type==="content_block_delta" && obj.delta && obj.delta.text) return obj.delta.text;
+      return "";
+    };
+  }else if(prov.type==="gemini"){
+    url = base + "/models/" + model + ":streamGenerateContent?alt=sse&key=" + encodeURIComponent(key);
+    headers = { "content-type":"application/json" };
+    body = JSON.stringify({
+      systemInstruction:{ parts:[{text:system}] },
+      contents:history.map(m=>({
+        role: m.role==="assistant" ? "model" : "user",
+        parts:[{text:m.content}]
+      }))
+    });
+    parseSSE = (obj)=>{
+      try{ return obj.candidates[0].content.parts.map(p=>p.text||"").join(""); }
+      catch(e){ return ""; }
+    };
+  }else{
+    // openai 兼容：GPT / DeepSeek / 千问 / Grok / 自定义
+    url = base + "/chat/completions";
+    headers = { "content-type":"application/json", "authorization":"Bearer "+key };
+    body = JSON.stringify({ model, stream:true,
+      messages:[{role:"system",content:system}, ...history] });
+    parseSSE = (obj)=>{
+      try{ return obj.choices[0].delta.content || ""; }
+      catch(e){ return ""; }
+    };
+  }
+
+  const r = await fetch(url,{ method:"POST", headers, body });
+  if(!r.ok){
+    let msg = "请求失败 " + r.status;
+    try{ const d = await r.json(); msg = d.error?.message || msg; }catch(e){}
+    throw new Error(msg);
+  }
+
+  // 读取 SSE 流
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buf = "", full = "";
+  while(true){
+    const { done, value } = await reader.read();
+    if(done) break;
+    buf += decoder.decode(value, {stream:true});
+    const lines = buf.split("\n");
+    buf = lines.pop();                       // 末行可能不完整，留到下一轮
+    for(let line of lines){
+      line = line.trim();
+      if(!line || !line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if(payload==="[DONE]") continue;
+      let obj;
+      try{ obj = JSON.parse(payload); }catch(e){ continue; }
+      const piece = parseSSE(obj);
+      if(piece){ full += piece; if(onDelta) onDelta(piece); }
+    }
+  }
+  if(!full) throw new Error("未收到内容（可能该接口不支持流式，或返回为空）");
+  return full;
+}
+
+/* ---------- 聊天 UI ---------- */
+const chatScroll = document.getElementById("chatScroll");
+function scrollDown(){ chatScroll.scrollTop = chatScroll.scrollHeight; }
+
+function addMsg(role, text, sources){
+  const empty = document.getElementById("chatEmpty");
+  if(empty) empty.remove();
+  const div = document.createElement("div");
+  div.className = "msg " + (role==="user"?"user":"bot");
+  const who = document.createElement("div");
+  who.className = "who";
+  who.textContent = role==="user" ? "我" : "助手";
+  const bubble = document.createElement("div");
+  bubble.className = "bubble" + (role==="err"?" err":"");
+  bubble.textContent = text;
+  div.appendChild(who); div.appendChild(bubble);
+  if(sources && sources.length){
+    const s = document.createElement("div");
+    s.className = "src";
+    s.appendChild(document.createTextNode("依据："));
+    sources.forEach(e=>{
+      const t = document.createElement("span");
+      t.className = "tag";
+      t.textContent = e.title || "无标题条目";
+      s.appendChild(t);
+    });
+    div.appendChild(s);
+  }
+  chatScroll.appendChild(div);
+  document.getElementById("chatBar").classList.add("show");
+  scrollDown();
+  return bubble;
+}
+function addTyping(){
+  const div = document.createElement("div");
+  div.className = "msg bot"; div.id = "typingMsg";
+  div.innerHTML = `<div class="who">助手</div>
+    <div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  chatScroll.appendChild(div); scrollDown();
+}
+function removeTyping(){ const t=document.getElementById("typingMsg"); if(t) t.remove(); }
+
+const qInput = document.getElementById("qInput");
+const sendBtn = document.getElementById("sendBtn");
+qInput.addEventListener("input",()=>{
+  qInput.style.height = "auto";
+  qInput.style.height = Math.min(qInput.scrollHeight,120) + "px";
+});
+
+async function send(){
+  if(busy) return;
+  const q = qInput.value.trim();
+  if(!q) return;
+  if(!settings.keys[settings.provider]){
+    addMsg("err","还没有配置模型密钥。请点底部「设置」，选好提供方并填入 API Key。");
+    return;
+  }
+  busy = true; sendBtn.disabled = true;
+  qInput.value = ""; qInput.style.height = "auto";
+
+  const used = retrieve(q);
+  addMsg("user", q);
+  messages.push({ role:"user", content:q });
+  addTyping();
+
+  try{
+    const system = buildSystemPrompt(used);
+    let bubble = null;
+    let acc = "";
+    const answer = await callModel(system, messages, (piece)=>{
+      if(!bubble){
+        removeTyping();
+        bubble = addMsg("bot", "", used);   // 收到第一个字才建气泡
+      }
+      acc += piece;
+      bubble.textContent = acc;
+      scrollDown();
+    });
+    if(!bubble){ removeTyping(); addMsg("bot", answer, used); }
+    messages.push({ role:"assistant", content:answer });
+  }catch(err){
+    removeTyping();
+    addMsg("err","调用失败：" + err.message
+      + "\n\n（如提示网络或 CORS 相关，多为浏览器直连限制，我们下一步再处理。）");
+  }
+  busy = false; sendBtn.disabled = false;
+}
+sendBtn.addEventListener("click", send);
+
+/* 回车键：手机端回车换行（靠发送按钮发送）；电脑端回车发送、Shift+回车换行 */
+const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+qInput.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && !e.shiftKey){
+    if(isTouchDevice) return;          // 手机：不拦截，回车即换行
+    e.preventDefault(); send();        // 电脑：回车发送
+  }
+});
+
+/* 新对话：清空当前对话，知识库不受影响 */
+function newChat(){
+  if(messages.length && !confirm("开始新对话？当前对话会清空，知识库不受影响。")) return;
+  messages = [];
+  chatScroll.innerHTML =
+    '<div class="empty-hint" id="chatEmpty">在下方提出你的神经内科问题。<br>'
+    + '回答会优先依据你自己录入的知识库，并标注引用来源。</div>';
+  document.getElementById("chatBar").classList.remove("show");
+}
+document.getElementById("newChatBtn").addEventListener("click", newChat);
+
+/* ---------- PWA：内联 manifest，保持单文件分发 ---------- */
+(function setupPWA(){
+  // 图标：与 apple-touch-icon 相同的内联 SVG
+  const ICON = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMGM1YjVlIi8+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjNlZmU2IiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGNpcmNsZSBjeD0iOTAiIGN5PSI1OCIgcj0iMTYiLz48Y2lyY2xlIGN4PSI1NCIgY3k9IjEwNCIgcj0iMTQiLz48Y2lyY2xlIGN4PSIxMjYiIGN5PSIxMDQiIHI9IjE0Ii8+PGNpcmNsZSBjeD0iOTAiIGN5PSIxNDAiIHI9IjEzIi8+PHBhdGggZD0iTTkwIDc0djI2TTc4IDY4IDY0IDkyTTEwMiA2OCAxMTYgOTJNNjYgMTE2bDIwIDE4TTExNCAxMTYgOTQgMTM0Ii8+PC9nPjwvc3ZnPg==";
+
+  // 用页面真实地址作 start_url / scope —— 内联 manifest 里不能用相对路径，
+  // 否则浏览器会以 manifest 自身的地址为基准解析，导致安装行为异常。
+  const pageUrl = location.href.split("#")[0].split("?")[0];
+  const dirUrl  = pageUrl.slice(0, pageUrl.lastIndexOf("/") + 1);
+
+  const manifest = {
+    name: "神经内科知识库",
+    short_name: "神内知识库",
+    description: "个人神经内科查询助手",
+    start_url: pageUrl,
+    scope: dirUrl,
+    display: "standalone",          // 独立窗口，无地址栏
+    orientation: "portrait",
+    background_color: "#f3efe6",
+    theme_color: "#0c5b5e",
+    icons: [
+      { src: ICON, sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: ICON, sizes: "any", type: "image/svg+xml", purpose: "maskable" }
+    ]
+  };
+  try{
+    const dataUri = "data:application/manifest+json," +
+                    encodeURIComponent(JSON.stringify(manifest));
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = dataUri;
+    document.head.appendChild(link);
+  }catch(e){}
+})();
+
+init();
+</script>
+</body>
+</html>
