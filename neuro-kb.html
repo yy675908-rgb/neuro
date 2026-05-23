@@ -45,13 +45,20 @@
   .view{flex:1;overflow-y:auto;display:none;-webkit-overflow-scrolling:touch;}
   .view.active{display:flex;flex-direction:column;}
 
-  #chatScroll{flex:1;overflow-y:auto;padding:18px 16px 8px;}
+  /* 对话顶栏：常驻，含对话切换 / 倾向 / 新对话 */
+  #chatBar{flex-shrink:0;display:flex;align-items:center;gap:8px;
+    padding:8px 12px;border-bottom:1px solid var(--line);background:var(--card);}
+  #convoListBtn{flex:1;min-width:0;display:flex;align-items:center;gap:5px;
+    background:var(--paper);border:1px solid var(--line);border-radius:9px;
+    padding:7px 11px;font-family:var(--sans);font-size:13px;color:var(--ink);cursor:pointer;}
+  #convoTitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;text-align:left;}
+  #convoListBtn .caret{color:var(--muted);font-size:11px;flex-shrink:0;}
+  .bar-btn{flex-shrink:0;border:1px solid var(--line);background:var(--paper);
+    border-radius:9px;padding:7px 11px;font-family:var(--sans);font-size:12.5px;
+    color:var(--accent);font-weight:600;cursor:pointer;}
 
-  #chatBar{flex-shrink:0;display:none;justify-content:flex-end;padding:8px 14px 0;}
-  #chatBar.show{display:flex;}
-  #newChatBtn{background:none;border:1px solid var(--line);border-radius:8px;
-    padding:5px 12px;font-family:var(--sans);font-size:12px;color:var(--muted);
-    cursor:pointer;}
+  #chatScroll{flex:1;overflow-y:auto;padding:18px 16px 8px;}
   .msg{margin-bottom:18px;display:flex;flex-direction:column;}
   .msg .who{font-size:11px;color:var(--muted);margin-bottom:4px;letter-spacing:.5px;text-transform:uppercase;}
   .bubble{padding:12px 15px;border-radius:14px;font-size:15.5px;line-height:1.65;
@@ -144,6 +151,23 @@
     font-size:14.5px;font-weight:600;cursor:pointer;}
   .btn-cancel{background:var(--card);border:1px solid var(--line);color:var(--muted);}
   .btn-ok{background:var(--accent);border:none;color:#fff;}
+
+  /* 对话列表 */
+  .convo-item{display:flex;align-items:center;gap:10px;background:var(--card);
+    border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:9px;}
+  .convo-item.on{border-color:var(--accent);background:var(--accent-soft);}
+  .convo-item .ci-main{flex:1;min-width:0;cursor:pointer;}
+  .convo-item .ci-title{font-size:14.5px;font-weight:600;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .convo-item .ci-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .convo-item .ci-del{flex-shrink:0;background:none;border:none;color:var(--warn);
+    font-family:var(--sans);font-size:12.5px;font-weight:600;cursor:pointer;padding:4px 2px;}
+
+  /* 回复倾向预设 */
+  .preset-row{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 14px;}
+  .preset-row button{border:1px solid var(--line);background:var(--card);
+    border-radius:8px;padding:7px 10px;font-family:var(--sans);font-size:12px;
+    color:var(--accent);cursor:pointer;}
 </style>
 </head>
 <body>
@@ -154,12 +178,14 @@
   </header>
 
   <section class="view active" id="view-chat">
-    <div id="chatBar"><button id="newChatBtn">＋ 新对话</button></div>
-    <div id="chatScroll">
-      <div class="empty-hint" id="chatEmpty">
-        在下方提出你的神经内科问题。<br>回答会优先依据你自己录入的知识库，并标注引用来源。
-      </div>
+    <div id="chatBar">
+      <button id="convoListBtn">
+        <span id="convoTitle">新对话</span><span class="caret">▾</span>
+      </button>
+      <button class="bar-btn" id="personaBtn">倾向</button>
+      <button class="bar-btn" id="newChatBtn">＋</button>
     </div>
+    <div id="chatScroll"></div>
     <div id="inputBar">
       <textarea id="qInput" rows="1" placeholder="提一个问题…"></textarea>
       <button class="send-btn" id="sendBtn">↑</button>
@@ -203,6 +229,11 @@
         <datalist id="modelList"></datalist>
         <div class="model-hint" id="modelHint"></div>
       </div>
+      <div class="field">
+        <label>默认回复倾向</label>
+        <div class="desc">新建对话时默认采用的回答偏好。每个对话仍可在「倾向」里单独修改。</div>
+        <textarea id="defaultPersona" rows="3" placeholder="例如：回答简明扼要，先给结论；必要时列出鉴别诊断。"></textarea>
+      </div>
       <button class="save-btn" id="saveSetBtn">保存设置</button>
       <div class="saved-flash" id="savedFlash"></div>
     </div>
@@ -215,6 +246,7 @@
   </nav>
 </div>
 
+<!-- 知识库条目编辑 -->
 <div class="modal-bg" id="kbModal">
   <div class="modal">
     <h2 id="kbModalTitle">新增条目</h2>
@@ -229,6 +261,31 @@
     <div class="modal-acts">
       <button class="btn-cancel" id="kbCancel">取消</button>
       <button class="btn-ok" id="kbSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 对话列表 -->
+<div class="modal-bg" id="convoModal">
+  <div class="modal">
+    <h2>对话列表</h2>
+    <div id="convoList"></div>
+    <button class="save-btn" id="newConvoBtn">＋ 新建对话</button>
+  </div>
+</div>
+
+<!-- 回复倾向 -->
+<div class="modal-bg" id="personaModal">
+  <div class="modal">
+    <h2>这个对话的回复倾向</h2>
+    <div class="field">
+      <div class="desc">写下希望 AI 在这个对话里遵循的回答偏好。只影响当前对话。</div>
+      <textarea id="personaText" placeholder="例如：回答尽量简短；多列鉴别诊断；优先引用最新指南。"></textarea>
+    </div>
+    <div class="preset-row" id="personaPresets"></div>
+    <div class="modal-acts">
+      <button class="btn-cancel" id="personaCancel">取消</button>
+      <button class="btn-ok" id="personaSave">保存</button>
     </div>
   </div>
 </div>
@@ -248,6 +305,14 @@ const PROVIDERS = {
 };
 const PROV_KEYS = Object.keys(PROVIDERS);
 
+/* 回复倾向预设 */
+const PERSONA_PRESETS = [
+  "回答简明扼要，先给结论，少铺垫。",
+  "尽量详细，展开机制与背景。",
+  "突出鉴别诊断，列出需要排除的情况。",
+  "优先参考最新临床指南，并注明指南名称与年份。"
+];
+
 /* ---------- 存储层：优先环境持久化，回退 localStorage ---------- */
 const Store = {
   async get(k){
@@ -261,11 +326,33 @@ const Store = {
 };
 
 /* ---------- 状态 ---------- */
-let settings = { provider:"claude", keys:{}, models:{}, customBase:"" };
+let settings = { provider:"claude", keys:{}, models:{}, customBase:"", defaultPersona:"" };
 let knowledge = [];
-let messages = [];
+let conversations = [];     // 多个对话，每个 {id,title,createdAt,log,persona}
+let currentId = null;       // 当前打开的对话 id
 let editingId = null;
 let busy = false;
+
+/* ---------- 工具函数 ---------- */
+function newConvoObj(){
+  return {
+    id: "c" + Date.now() + Math.random().toString(36).slice(2,6),
+    title: "新对话",
+    createdAt: Date.now(),
+    log: [],                            // [{role:'user'|'bot', content, sources?}]
+    persona: settings.defaultPersona || ""
+  };
+}
+function curConvo(){
+  return conversations.find(c=>c.id===currentId) || null;
+}
+function fmtDate(ts){
+  const d = new Date(ts);
+  const p = n=>String(n).padStart(2,"0");
+  return `${d.getMonth()+1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function openModal(id){ document.getElementById(id).classList.add("show"); }
+function closeModal(id){ document.getElementById(id).classList.remove("show"); }
 
 /* ---------- 初始化 ---------- */
 async function init(){
@@ -280,16 +367,43 @@ async function init(){
         if(o.key) settings.keys[settings.provider] = o.key;
         if(o.model) settings.models[settings.provider] = o.model;
       }else{
-        settings = Object.assign({provider:"claude",keys:{},models:{},customBase:""}, o);
+        settings = Object.assign({provider:"claude",keys:{},models:{},customBase:"",defaultPersona:""}, o);
       }
     }catch(e){}
   }
   const k = await Store.get("nkb_knowledge");
   if(k){ try{ knowledge = JSON.parse(k)||[]; }catch(e){} }
+
+  const cv = await Store.get("nkb_convos");
+  if(cv){ try{ conversations = JSON.parse(cv)||[]; }catch(e){} }
+  const ci = await Store.get("nkb_current");
+  if(ci) currentId = ci;
+
+  // 迁移：旧版本单一聊天记录 → 转成第一个对话
+  if(conversations.length===0){
+    const old = await Store.get("nkb_chatlog");
+    if(old){
+      try{
+        const oldLog = JSON.parse(old)||[];
+        if(oldLog.length){
+          conversations.push({
+            id:"c"+Date.now(), title:"（之前的对话）",
+            createdAt:Date.now(), log:oldLog, persona:""
+          });
+        }
+      }catch(e){}
+    }
+  }
+  // 至少保证有一个对话
+  if(conversations.length===0) conversations.push(newConvoObj());
+  if(!currentId || !curConvo()) currentId = conversations[0].id;
+
   buildProvGrid();
+  buildPersonaPresets();
   renderSettings();
   renderKb();
   refreshStatus();
+  renderHistory();
 }
 
 function refreshStatus(){
@@ -335,6 +449,7 @@ function captureFields(){
   settings.keys[cur] = document.getElementById("apiKey").value.trim();
   settings.models[cur] = document.getElementById("modelName").value.trim();
   if(cur==="custom") settings.customBase = document.getElementById("baseUrl").value.trim();
+  settings.defaultPersona = document.getElementById("defaultPersona").value;
 }
 function renderSettings(){
   document.querySelectorAll("#provGrid button").forEach(b=>{
@@ -343,6 +458,7 @@ function renderSettings(){
   const cur = settings.provider;
   document.getElementById("apiKey").value = settings.keys[cur] || "";
   document.getElementById("modelName").value = settings.models[cur] || "";
+  document.getElementById("defaultPersona").value = settings.defaultPersona || "";
   const baseField = document.getElementById("baseField");
   if(cur==="custom"){
     baseField.style.display = "block";
@@ -457,18 +573,17 @@ function openKbModal(item){
   document.getElementById("kbModalTitle").textContent = item ? "编辑条目" : "新增条目";
   document.getElementById("kbTitle").value = item ? item.title : "";
   document.getElementById("kbContent").value = item ? item.content : "";
-  document.getElementById("kbModal").classList.add("show");
+  openModal("kbModal");
 }
-function closeKbModal(){ document.getElementById("kbModal").classList.remove("show"); }
 document.getElementById("addKbBtn").addEventListener("click",()=>openKbModal(null));
-document.getElementById("kbCancel").addEventListener("click",closeKbModal);
+document.getElementById("kbCancel").addEventListener("click",()=>closeModal("kbModal"));
 document.getElementById("kbModal").addEventListener("click",e=>{
-  if(e.target.id==="kbModal") closeKbModal();
+  if(e.target.id==="kbModal") closeModal("kbModal");
 });
 document.getElementById("kbSave").addEventListener("click", async ()=>{
   const t = document.getElementById("kbTitle").value.trim();
   const c = document.getElementById("kbContent").value.trim();
-  if(!t && !c){ closeKbModal(); return; }
+  if(!t && !c){ closeModal("kbModal"); return; }
   if(editingId){
     const it = knowledge.find(x=>x.id===editingId);
     if(it){ it.title=t; it.content=c; }
@@ -476,7 +591,7 @@ document.getElementById("kbSave").addEventListener("click", async ()=>{
     knowledge.push({ id:"k"+Date.now(), title:t, content:c });
   }
   await Store.set("nkb_knowledge", JSON.stringify(knowledge));
-  closeKbModal(); renderKb(); refreshStatus();
+  closeModal("kbModal"); renderKb(); refreshStatus();
 });
 async function delKb(id){
   if(!confirm("删除这条知识？")) return;
@@ -508,7 +623,7 @@ function retrieve(query){
 }
 
 /* ---------- 提示词 ---------- */
-function buildSystemPrompt(used){
+function buildSystemPrompt(used, persona){
   let p = "你是一位严谨的神经内科知识助手，服务对象是一名神经内科医生。";
   if(used.length){
     p += "请优先依据下面提供的【知识库摘录】回答问题。规则：\n"
@@ -519,6 +634,9 @@ function buildSystemPrompt(used){
   }else{
     p += "当前知识库为空或无相关条目。请基于通用医学知识谨慎回答，"
        + "并在开头注明「以下回答来自通用知识，未基于个人知识库」。回答简洁、专业、准确。";
+  }
+  if(persona && persona.trim()){
+    p += "\n\n【本次对话的回复偏好】\n在不违反上述规则的前提下，请尽量遵循以下偏好：\n" + persona.trim();
   }
   return p;
 }
@@ -638,7 +756,6 @@ function addMsg(role, text, sources){
     div.appendChild(s);
   }
   chatScroll.appendChild(div);
-  document.getElementById("chatBar").classList.add("show");
   scrollDown();
   return bubble;
 }
@@ -650,6 +767,26 @@ function addTyping(){
   chatScroll.appendChild(div); scrollDown();
 }
 function removeTyping(){ const t=document.getElementById("typingMsg"); if(t) t.remove(); }
+
+/* 渲染当前对话的全部消息 */
+function renderHistory(){
+  chatScroll.innerHTML = "";
+  const convo = curConvo();
+  updateChatBarTitle();
+  if(!convo || !convo.log.length){
+    chatScroll.innerHTML = '<div class="empty-hint" id="chatEmpty">'
+      + '在下方提出你的神经内科问题。<br>回答会优先依据你自己录入的知识库，并标注引用来源。</div>';
+    return;
+  }
+  convo.log.forEach(m=>{
+    if(m.role==="user") addMsg("user", m.content);
+    else addMsg("bot", m.content, m.sources||[]);
+  });
+}
+function updateChatBarTitle(){
+  const convo = curConvo();
+  document.getElementById("convoTitle").textContent = convo ? convo.title : "新对话";
+}
 
 const qInput = document.getElementById("qInput");
 const sendBtn = document.getElementById("sendBtn");
@@ -666,19 +803,34 @@ async function send(){
     addMsg("err","还没有配置模型密钥。请点底部「设置」，选好提供方并填入 API Key。");
     return;
   }
+  const convo = curConvo();
+  if(!convo) return;
+
   busy = true; sendBtn.disabled = true;
   qInput.value = ""; qInput.style.height = "auto";
 
   const used = retrieve(q);
   addMsg("user", q);
-  messages.push({ role:"user", content:q });
+  convo.log.push({ role:"user", content:q });
+  // 首次提问：用问题前几个字自动命名对话
+  const wasUntitled = (!convo.title || convo.title==="新对话");
+  if(wasUntitled){
+    convo.title = q.slice(0,16) + (q.length>16 ? "…" : "");
+    updateChatBarTitle();
+  }
   addTyping();
 
+  // 发给模型的历史 = 当前对话已有消息
+  const history = convo.log.map(m=>({
+    role: m.role==="user" ? "user" : "assistant",
+    content: m.content
+  }));
+
   try{
-    const system = buildSystemPrompt(used);
+    const system = buildSystemPrompt(used, convo.persona);
     let bubble = null;
     let acc = "";
-    const answer = await callModel(system, messages, (piece)=>{
+    const answer = await callModel(system, history, (piece)=>{
       if(!bubble){
         removeTyping();
         bubble = addMsg("bot", "", used);   // 收到第一个字才建气泡
@@ -688,11 +840,16 @@ async function send(){
       scrollDown();
     });
     if(!bubble){ removeTyping(); addMsg("bot", answer, used); }
-    messages.push({ role:"assistant", content:answer });
+    convo.log.push({ role:"bot", content:answer, sources:used.map(e=>({title:e.title})) });
+    saveConvos();
   }catch(err){
     removeTyping();
     addMsg("err","调用失败：" + err.message
       + "\n\n（如提示网络或 CORS 相关，多为浏览器直连限制，我们下一步再处理。）");
+    // 这一轮失败：撤回刚加入的用户消息，避免污染历史与存档
+    if(convo.log.length && convo.log[convo.log.length-1].role==="user") convo.log.pop();
+    if(wasUntitled && convo.log.length===0){ convo.title = "新对话"; updateChatBarTitle(); }
+    saveConvos();
   }
   busy = false; sendBtn.disabled = false;
 }
@@ -707,34 +864,115 @@ qInput.addEventListener("keydown",e=>{
   }
 });
 
-/* 新对话：清空当前对话，知识库不受影响 */
-function newChat(){
-  if(messages.length && !confirm("开始新对话？当前对话会清空，知识库不受影响。")) return;
-  messages = [];
-  chatScroll.innerHTML =
-    '<div class="empty-hint" id="chatEmpty">在下方提出你的神经内科问题。<br>'
-    + '回答会优先依据你自己录入的知识库，并标注引用来源。</div>';
-  document.getElementById("chatBar").classList.remove("show");
+/* ---------- 多对话管理 ---------- */
+async function saveConvos(){
+  await Store.set("nkb_convos", JSON.stringify(conversations));
+  await Store.set("nkb_current", currentId);
 }
-document.getElementById("newChatBtn").addEventListener("click", newChat);
+function newConversation(){
+  const c = newConvoObj();
+  conversations.unshift(c);     // 新对话排在最前
+  currentId = c.id;
+  saveConvos();
+  closeModal("convoModal");
+  renderHistory();
+}
+function switchConvo(id){
+  currentId = id;
+  saveConvos();
+  closeModal("convoModal");
+  renderHistory();
+}
+function deleteConvo(id){
+  if(!confirm("删除这个对话？此操作无法撤销。")) return;
+  conversations = conversations.filter(c=>c.id!==id);
+  if(conversations.length===0) conversations.push(newConvoObj());
+  if(currentId===id) currentId = conversations[0].id;
+  saveConvos();
+  renderConvoList();
+  renderHistory();
+}
+function renderConvoList(){
+  const box = document.getElementById("convoList");
+  box.innerHTML = "";
+  conversations.forEach(c=>{
+    const div = document.createElement("div");
+    div.className = "convo-item" + (c.id===currentId ? " on" : "");
+    const main = document.createElement("div");
+    main.className = "ci-main";
+    const t = document.createElement("div");
+    t.className = "ci-title";
+    t.textContent = c.title || "新对话";
+    const meta = document.createElement("div");
+    meta.className = "ci-meta";
+    const n = c.log.filter(m=>m.role==="user").length;
+    meta.textContent = `${n} 个提问 · ${fmtDate(c.createdAt)}`
+      + (c.persona && c.persona.trim() ? " · 已设倾向" : "");
+    main.appendChild(t); main.appendChild(meta);
+    main.addEventListener("click",()=>switchConvo(c.id));
+    const del = document.createElement("button");
+    del.className = "ci-del";
+    del.textContent = "删除";
+    del.addEventListener("click",(e)=>{ e.stopPropagation(); deleteConvo(c.id); });
+    div.appendChild(main); div.appendChild(del);
+    box.appendChild(div);
+  });
+}
+document.getElementById("convoListBtn").addEventListener("click",()=>{
+  renderConvoList();
+  openModal("convoModal");
+});
+document.getElementById("newConvoBtn").addEventListener("click", newConversation);
+document.getElementById("newChatBtn").addEventListener("click", newConversation);
+document.getElementById("convoModal").addEventListener("click",e=>{
+  if(e.target.id==="convoModal") closeModal("convoModal");
+});
+
+/* ---------- 回复倾向 ---------- */
+function buildPersonaPresets(){
+  const box = document.getElementById("personaPresets");
+  box.innerHTML = "";
+  PERSONA_PRESETS.forEach(text=>{
+    const b = document.createElement("button");
+    b.textContent = text.length>14 ? text.slice(0,14)+"…" : text;
+    b.title = text;
+    b.addEventListener("click",()=>{
+      document.getElementById("personaText").value = text;
+    });
+    box.appendChild(b);
+  });
+}
+function openPersonaModal(){
+  const convo = curConvo();
+  document.getElementById("personaText").value = convo ? (convo.persona||"") : "";
+  openModal("personaModal");
+}
+document.getElementById("personaBtn").addEventListener("click", openPersonaModal);
+document.getElementById("personaCancel").addEventListener("click",()=>closeModal("personaModal"));
+document.getElementById("personaModal").addEventListener("click",e=>{
+  if(e.target.id==="personaModal") closeModal("personaModal");
+});
+document.getElementById("personaSave").addEventListener("click",()=>{
+  const convo = curConvo();
+  if(convo){
+    convo.persona = document.getElementById("personaText").value;
+    saveConvos();
+  }
+  closeModal("personaModal");
+});
 
 /* ---------- PWA：内联 manifest，保持单文件分发 ---------- */
 (function setupPWA(){
-  // 图标：与 apple-touch-icon 相同的内联 SVG
   const ICON = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMGM1YjVlIi8+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjNlZmU2IiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGNpcmNsZSBjeD0iOTAiIGN5PSI1OCIgcj0iMTYiLz48Y2lyY2xlIGN4PSI1NCIgY3k9IjEwNCIgcj0iMTQiLz48Y2lyY2xlIGN4PSIxMjYiIGN5PSIxMDQiIHI9IjE0Ii8+PGNpcmNsZSBjeD0iOTAiIGN5PSIxNDAiIHI9IjEzIi8+PHBhdGggZD0iTTkwIDc0djI2TTc4IDY4IDY0IDkyTTEwMiA2OCAxMTYgOTJNNjYgMTE2bDIwIDE4TTExNCAxMTYgOTQgMTM0Ii8+PC9nPjwvc3ZnPg==";
-
-  // 用页面真实地址作 start_url / scope —— 内联 manifest 里不能用相对路径，
-  // 否则浏览器会以 manifest 自身的地址为基准解析，导致安装行为异常。
   const pageUrl = location.href.split("#")[0].split("?")[0];
   const dirUrl  = pageUrl.slice(0, pageUrl.lastIndexOf("/") + 1);
-
   const manifest = {
     name: "神经内科知识库",
     short_name: "神内知识库",
     description: "个人神经内科查询助手",
     start_url: pageUrl,
     scope: dirUrl,
-    display: "standalone",          // 独立窗口，无地址栏
+    display: "standalone",
     orientation: "portrait",
     background_color: "#f3efe6",
     theme_color: "#0c5b5e",
