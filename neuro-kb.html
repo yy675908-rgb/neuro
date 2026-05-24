@@ -22,7 +22,7 @@
     --paper:#f6f5f2; --card:#ffffff; --ink:#2b2926; --muted:#9a948b;
     --line:#ece9e3; --line-soft:#f1efea;
     --accent:#0d6063; --accent-soft:#eef3f1;
-    --user-bg:#c4d6cf; --user-ink:#1d2a27; --warn:#b25138;
+    --user-bg:#d4e9e4; --user-ink:#1f3330; --warn:#b25138;
     --shadow:0 1px 3px rgba(40,38,34,.05), 0 6px 20px rgba(40,38,34,.06);
     --shadow-lift:0 4px 16px rgba(40,38,34,.10), 0 12px 40px rgba(40,38,34,.12);
     --sans:'Hanken Grotesk',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
@@ -309,6 +309,55 @@
   .model-pick .mp-state{flex-shrink:0;font-size:11.5px;font-weight:600;}
   .model-pick .mp-state.ready{color:var(--accent);}
   .model-pick .mp-state.empty{color:var(--warn);}
+
+  /* 长按菜单 */
+  .menu-list{display:flex;flex-direction:column;gap:6px;margin-bottom:6px;}
+  .menu-item{display:flex;align-items:center;gap:11px;background:var(--card);
+    box-shadow:var(--shadow);border:none;border-radius:12px;padding:13px 15px;
+    font-family:var(--sans);font-size:14.5px;color:var(--ink);cursor:pointer;
+    text-align:left;transition:transform .12s var(--ease);}
+  .menu-item:active{transform:scale(.98);}
+  .menu-item.danger{color:var(--warn);}
+  .menu-item .mi-ico{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+
+  /* 侧栏对话条：置顶绿点 + 收藏星标 */
+  .convo-item .ci-star{flex-shrink:0;color:#d9a441;font-size:13px;}
+  .convo-item .ci-pin{flex-shrink:0;width:7px;height:7px;border-radius:50%;
+    background:var(--accent);}
+  .menu-item .mi-dot{width:9px;height:9px;border-radius:50%;
+    background:var(--accent);flex-shrink:0;margin:0 5px 0 6px;}
+  .menu-item .mi-star{color:#d9a441;}
+
+  /* 收藏夹 */
+  .fav-tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .fav-tab{flex:1;border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:11px;padding:10px;font-family:var(--sans);font-size:13px;
+    color:var(--muted);font-weight:600;cursor:pointer;}
+  .fav-tab.on{background:var(--accent);color:#fff;}
+  .fav-entry{background:var(--card);box-shadow:var(--shadow);border-radius:12px;
+    padding:12px 14px;margin-bottom:9px;cursor:pointer;animation:rise .24s var(--ease);}
+  .fav-entry .fe-title{font-size:14px;font-weight:600;margin-bottom:3px;}
+  .fav-entry .fe-text{font-size:13px;color:var(--muted);line-height:1.5;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .fav-entry .fe-meta{font-size:11px;color:var(--muted);margin-top:5px;
+    display:flex;justify-content:space-between;}
+  .fav-entry .fe-meta button{background:none;border:none;color:var(--warn);
+    font-family:var(--sans);font-size:11.5px;cursor:pointer;font-weight:600;}
+  .fav-empty{text-align:center;color:var(--muted);font-family:var(--serif);
+    font-style:italic;font-size:14px;padding:30px 12px;}
+
+  /* 多版本回复切换条 */
+  .ver-bar{display:flex;align-items:center;gap:8px;margin-top:6px;
+    font-size:12px;color:var(--muted);}
+  .ver-bar button{background:var(--card);box-shadow:var(--shadow);border:none;
+    width:24px;height:24px;border-radius:7px;cursor:pointer;color:var(--accent);
+    font-size:13px;display:flex;align-items:center;justify-content:center;}
+  .ver-bar button:disabled{opacity:.35;}
+  .ver-bar .ver-num{min-width:42px;text-align:center;}
+  /* 翻译块 */
+  .trans-block{margin-top:8px;padding:11px 13px;background:var(--accent-soft);
+    border-radius:12px;font-size:14.5px;line-height:1.6;color:var(--ink);
+    white-space:pre-wrap;word-break:break-word;animation:rise .24s var(--ease);}
 </style>
 </head>
 <body>
@@ -319,6 +368,7 @@
       <button class="icon-btn" id="convoListBtn" aria-label="对话列表">☰</button>
       <button id="modelBtn"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
       <div class="bar-spacer"></div>
+      <button class="icon-btn" id="favBtn" aria-label="收藏夹">♥</button>
       <button class="bar-btn" id="personaBtn">倾向</button>
       <button class="icon-btn" id="newChatBtn" aria-label="新对话">＋</button>
     </div>
@@ -497,6 +547,37 @@
   </div>
 </div>
 
+<!-- 对话长按菜单 -->
+<div class="modal-bg centered" id="convoMenuModal">
+  <div class="modal">
+    <h2 id="convoMenuTitle">对话操作</h2>
+    <div class="menu-list">
+      <button class="menu-item" id="cmPin"><span class="mi-dot"></span><span id="cmPinText">置顶</span></button>
+      <button class="menu-item" id="cmRename"><span class="mi-ico">✎</span>重命名</button>
+      <button class="menu-item" id="cmFav"><span class="mi-ico mi-star">★</span><span id="cmFavText">收藏此对话</span></button>
+      <button class="menu-item danger" id="cmDelete"><span class="mi-ico">🗑</span>删除对话</button>
+    </div>
+    <div class="modal-acts" style="margin-top:8px;">
+      <button class="btn-cancel" id="convoMenuClose">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 收藏夹 -->
+<div class="modal-bg" id="favModal">
+  <div class="modal">
+    <h2>收藏夹</h2>
+    <div class="fav-tabs">
+      <button class="fav-tab on" data-ft="convo">收藏的对话</button>
+      <button class="fav-tab" data-ft="msg">收藏的回复</button>
+    </div>
+    <div id="favList"></div>
+    <div class="modal-acts" style="margin-top:10px;">
+      <button class="btn-cancel" id="favClose">关闭</button>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 
@@ -551,9 +632,11 @@ function newConvoObj(){
     id: "c" + Date.now() + Math.random().toString(36).slice(2,6),
     title: "新对话",
     createdAt: Date.now(),
-    log: [],                            // [{role:'user'|'bot', content, sources?}]
+    log: [],                            // [{role:'user'|'bot', content, sources?, versions?, favorite?}]
     persona: settings.defaultPersona || "",
-    provider: settings.provider || "claude"   // 该对话使用的模型提供方
+    provider: settings.provider || "claude",   // 该对话使用的模型提供方
+    pinned: 0,                          // 置顶时间戳，0=未置顶
+    favorite: 0                         // 收藏时间戳，0=未收藏
   };
 }
 function curConvo(){
@@ -612,7 +695,7 @@ async function init(){
     }
   }
   // 旧对话补齐 provider 字段
-  conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider || "claude"; });
+  conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider || "claude"; if(!c.pinned) c.pinned = 0; if(!c.favorite) c.favorite = 0; });
   // 至少保证有一个对话
   if(conversations.length===0) conversations.push(newConvoObj());
   if(!currentId || !curConvo()) currentId = conversations[0].id;
@@ -1146,10 +1229,32 @@ function addMsg(role, content, sources, logIndex){
     div.appendChild(s);
   }
 
-  // 操作栏：复制 / 编辑（仅正式消息，错误消息不加）
+  // 操作栏：复制 / 编辑 / 译 / 收藏 / 重新生成（错误消息不加）
   if(role!=="err" && typeof logIndex==="number" && logIndex>=0){
+    const convo = curConvo();
+    const m = convo ? convo.log[logIndex] : null;
+
+    // bot 消息：多版本切换条（有 2 个及以上版本时显示）
+    if(role!=="user" && m && m.versions && m.versions.length>1){
+      const vbar = document.createElement("div");
+      vbar.className = "ver-bar";
+      const vi = (typeof m.activeVer==="number") ? m.activeVer : m.versions.length-1;
+      const prev = document.createElement("button");
+      prev.textContent = "‹"; prev.disabled = vi<=0;
+      const num = document.createElement("span");
+      num.className = "ver-num";
+      num.textContent = (vi+1) + " / " + m.versions.length;
+      const next = document.createElement("button");
+      next.textContent = "›"; next.disabled = vi>=m.versions.length-1;
+      prev.addEventListener("click",()=>switchVersion(logIndex, vi-1));
+      next.addEventListener("click",()=>switchVersion(logIndex, vi+1));
+      vbar.appendChild(prev); vbar.appendChild(num); vbar.appendChild(next);
+      div.appendChild(vbar);
+    }
+
     const acts = document.createElement("div");
     acts.className = "msg-acts";
+
     const copyBtn = document.createElement("button");
     copyBtn.textContent = "复制";
     copyBtn.addEventListener("click",()=>{
@@ -1159,10 +1264,40 @@ function addMsg(role, content, sources, logIndex){
         navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));
       }else fallbackCopy(txt,done);
     });
+    acts.appendChild(copyBtn);
+
     const editBtn = document.createElement("button");
     editBtn.textContent = "编辑";
     editBtn.addEventListener("click",()=>startEdit(div, logIndex, role));
-    acts.appendChild(copyBtn); acts.appendChild(editBtn);
+    acts.appendChild(editBtn);
+
+    // 译
+    const transBtn = document.createElement("button");
+    transBtn.textContent = "译";
+    transBtn.addEventListener("click",()=>translateMsg(div, logIndex, transBtn));
+    acts.appendChild(transBtn);
+
+    // 收藏（用星标，收藏的回复进收藏夹）
+    const favBtn = document.createElement("button");
+    favBtn.textContent = (m && m.favorite) ? "★ 已藏" : "☆ 收藏";
+    if(m && m.favorite) favBtn.style.color = "#d9a441";
+    favBtn.addEventListener("click",()=>{
+      if(!m) return;
+      m.favorite = m.favorite ? 0 : Date.now();
+      favBtn.textContent = m.favorite ? "★ 已藏" : "☆ 收藏";
+      favBtn.style.color = m.favorite ? "#d9a441" : "";
+      saveConvos();
+    });
+    acts.appendChild(favBtn);
+
+    // 重新生成（仅 bot 消息）
+    if(role!=="user"){
+      const regenBtn = document.createElement("button");
+      regenBtn.textContent = "↻ 重答";
+      regenBtn.addEventListener("click",()=>regenerateAt(logIndex));
+      acts.appendChild(regenBtn);
+    }
+
     div.appendChild(acts);
   }
 
@@ -1214,9 +1349,13 @@ function startEdit(msgDiv, logIndex, role){
     // 保留原有图片（若有）
     const imgs = msgImgs(m.content);
     m.content = imgs.length ? {text:v, images:imgs} : v;
+    // bot 消息有多版本时，同步更新当前选中版本
+    if(role!=="user" && m.versions && m.versions.length){
+      const vi = (typeof m.activeVer==="number") ? m.activeVer : m.versions.length-1;
+      m.versions[vi] = v;
+    }
     saveConvos();
     if(role==="user"){
-      // 编辑提问：删掉这条之后的所有消息，重新回答
       convo.log = convo.log.slice(0, logIndex+1);
       saveConvos();
       renderHistory();
@@ -1290,7 +1429,7 @@ async function runTurn(convo, used){
   addTyping();
   const history = convo.log.map(m=>({
     role: m.role==="user" ? "user" : "assistant",
-    content: m.content
+    content: activeContent(m)
   }));
   abortCtrl = new AbortController();
   try{
@@ -1299,7 +1438,7 @@ async function runTurn(convo, used){
     const answer = await callModel(system, history, (piece)=>{
       if(!bubble){
         removeTyping();
-        const idx = convo.log.length;   // bot 消息即将占据的下标
+        const idx = convo.log.length;
         bubble = addMsg("bot", "", used, idx);
       }
       acc += piece;
@@ -1307,16 +1446,19 @@ async function runTurn(convo, used){
       followScroll();
     }, convo.provider, abortCtrl.signal);
     if(!bubble){ removeTyping(); addMsg("bot", answer, used, convo.log.length); }
-    convo.log.push({ role:"bot", content:answer, sources:used.map(e=>({title:e.title})) });
+    convo.log.push({ role:"bot", content:answer,
+      sources:used.map(e=>({title:e.title})),
+      versions:[answer], activeVer:0 });
     saveConvos();
     maybeOfferCompress(convo);
   }catch(err){
     removeTyping();
     if(err.name==="AbortError"){
-      // 用户主动停止：保留已生成的部分（若有气泡则其文本已在界面）
       const last = chatScroll.querySelector(".msg.bot:last-child .bubble");
       if(last && last.textContent.trim()){
-        convo.log.push({ role:"bot", content:last.textContent, sources:used.map(e=>({title:e.title})) });
+        const txt = last.textContent;
+        convo.log.push({ role:"bot", content:txt,
+          sources:used.map(e=>({title:e.title})), versions:[txt], activeVer:0 });
       }
       saveConvos();
     }else{
@@ -1327,6 +1469,103 @@ async function runTurn(convo, used){
     abortCtrl = null;
   }
   return true;
+}
+
+/* 取一条消息当前生效的内容（多版本时取选中版本） */
+function activeContent(m){
+  if(m.role!=="user" && m.versions && m.versions.length){
+    const vi = (typeof m.activeVer==="number") ? m.activeVer : m.versions.length-1;
+    return m.versions[vi];
+  }
+  return m.content;
+}
+
+/* 切换某条 bot 消息的版本 */
+function switchVersion(logIndex, vi){
+  const convo = curConvo();
+  if(!convo) return;
+  const m = convo.log[logIndex];
+  if(!m || !m.versions || vi<0 || vi>=m.versions.length) return;
+  m.activeVer = vi;
+  m.content = m.versions[vi];
+  saveConvos();
+  renderHistory();
+}
+
+/* 在某条 bot 消息处重新生成：追加为新版本 */
+async function regenerateAt(logIndex){
+  const convo = curConvo();
+  if(!convo || busy) return;
+  const m = convo.log[logIndex];
+  if(!m || m.role==="user") return;
+  // 找这条之前最近的 user 提问
+  let used = [];
+  for(let i=logIndex-1;i>=0;i--){
+    if(convo.log[i].role==="user"){ used = retrieve(msgText(convo.log[i].content)); break; }
+  }
+  // 用截止到这条消息之前的历史作上下文
+  const history = convo.log.slice(0,logIndex).map(mm=>({
+    role: mm.role==="user" ? "user" : "assistant",
+    content: activeContent(mm)
+  }));
+  setBusy(true);
+  addTyping();
+  abortCtrl = new AbortController();
+  try{
+    const system = buildSystemPrompt(used, convo.persona);
+    let acc = "";
+    const answer = await callModel(system, history, (piece)=>{
+      removeTyping();
+      acc += piece;
+    }, convo.provider, abortCtrl.signal);
+    if(!m.versions) m.versions = [m.content];
+    m.versions.push(answer);
+    m.activeVer = m.versions.length-1;
+    m.content = answer;
+    saveConvos();
+    renderHistory();
+  }catch(err){
+    removeTyping();
+    if(err.name!=="AbortError"){
+      addMsg("err","重新生成失败：" + err.message, null, -1);
+    }
+  }finally{
+    abortCtrl = null;
+    setBusy(false);
+  }
+}
+
+/* 翻译某条消息：结果显示在原文下方 */
+async function translateMsg(msgDiv, logIndex, btn){
+  const convo = curConvo();
+  if(!convo || busy) return;
+  const m = convo.log[logIndex];
+  if(!m) return;
+  // 已翻译则切换显示/隐藏
+  const existing = msgDiv.querySelector(".trans-block");
+  if(existing){ existing.remove(); btn.textContent="译"; return; }
+
+  const text = msgText(activeContent(m));
+  if(!text.trim()) return;
+  btn.textContent = "译…";
+  const sys = "你是翻译助手。如果下面文字是中文，翻译成英文；如果是其他语言，翻译成中文。只输出译文。";
+  abortCtrl = new AbortController();
+  try{
+    const out = await callModel(sys,[{role:"user",content:text}],
+      null, convo.provider, abortCtrl.signal);
+    const block = document.createElement("div");
+    block.className = "trans-block";
+    block.textContent = out;
+    // 插到操作栏之前
+    const acts = msgDiv.querySelector(".msg-acts");
+    msgDiv.insertBefore(block, acts);
+    btn.textContent = "隐藏译文";
+  }catch(err){
+    if(err.name!=="AbortError") btn.textContent = "译(失败)";
+    else btn.textContent = "译";
+  }finally{
+    abortCtrl = null;
+  }
 }
 
 /* 重新生成最后一条回答（用于编辑提问后） */
@@ -1465,11 +1704,58 @@ document.getElementById("renameSave").addEventListener("click",()=>{
   if(c){
     const v = document.getElementById("renameInput").value.trim();
     c.title = v || c.title || "新对话";
-    c.named = !!v;          // 标记为用户自定义，避免被自动命名覆盖
+    c.named = !!v;
     saveConvos();
     renderConvoList(document.getElementById("convoSearch").value);
   }
   closeModal("renameModal");
+});
+
+/* 排序：置顶的在前（按置顶时间倒序），其余按创建时间倒序 */
+function sortedConvos(){
+  return conversations.slice().sort((a,b)=>{
+    const ap = a.pinned||0, bp = b.pinned||0;
+    if(ap && bp) return bp - ap;
+    if(ap) return -1;
+    if(bp) return 1;
+    return (b.createdAt||0) - (a.createdAt||0);
+  });
+}
+
+/* ---------- 对话长按菜单 ---------- */
+let menuConvoId = null;
+function openConvoMenu(id){
+  const c = conversations.find(x=>x.id===id);
+  if(!c) return;
+  menuConvoId = id;
+  document.getElementById("convoMenuTitle").textContent = c.title || "对话操作";
+  document.getElementById("cmPinText").textContent = c.pinned ? "取消置顶" : "置顶";
+  document.getElementById("cmFavText").textContent = c.favorite ? "取消收藏" : "收藏此对话";
+  openModal("convoMenuModal");
+}
+document.getElementById("convoMenuClose").addEventListener("click",()=>closeModal("convoMenuModal"));
+document.getElementById("convoMenuModal").addEventListener("click",e=>{
+  if(e.target.id==="convoMenuModal") closeModal("convoMenuModal");
+});
+document.getElementById("cmPin").addEventListener("click",()=>{
+  const c = conversations.find(x=>x.id===menuConvoId);
+  if(c){ c.pinned = c.pinned ? 0 : Date.now(); saveConvos();
+    renderConvoList(document.getElementById("convoSearch").value); }
+  closeModal("convoMenuModal");
+});
+document.getElementById("cmRename").addEventListener("click",()=>{
+  closeModal("convoMenuModal");
+  setTimeout(()=>openRename(menuConvoId), 200);
+});
+document.getElementById("cmFav").addEventListener("click",()=>{
+  const c = conversations.find(x=>x.id===menuConvoId);
+  if(c){ c.favorite = c.favorite ? 0 : Date.now(); saveConvos();
+    renderConvoList(document.getElementById("convoSearch").value); }
+  closeModal("convoMenuModal");
+});
+document.getElementById("cmDelete").addEventListener("click",()=>{
+  closeModal("convoMenuModal");
+  setTimeout(()=>deleteConvo(menuConvoId), 200);
 });
 
 /* 列表渲染，支持关键词过滤 */
@@ -1477,13 +1763,16 @@ function renderConvoList(keyword){
   const box = document.getElementById("convoList");
   box.innerHTML = "";
   const kw = (keyword||"").trim().toLowerCase();
-  const list = kw
-    ? conversations.filter(c=>{
-        if((c.title||"").toLowerCase().includes(kw)) return true;
-        // 也搜对话内容
-        return c.log.some(m=>(m.content||"").toLowerCase().includes(kw));
-      })
-    : conversations;
+  let list = sortedConvos();
+  if(kw){
+    list = list.filter(c=>{
+      if((c.title||"").toLowerCase().includes(kw)) return true;
+      return c.log.some(m=>{
+        const t = (typeof m.content==="string") ? m.content : (m.content&&m.content.text||"");
+        return t.toLowerCase().includes(kw);
+      });
+    });
+  }
   if(list.length===0){
     box.innerHTML = '<div class="ci-empty">'
       + (kw ? "没有匹配的对话" : "还没有对话") + '</div>';
@@ -1492,6 +1781,12 @@ function renderConvoList(keyword){
   list.forEach(c=>{
     const div = document.createElement("div");
     div.className = "convo-item" + (c.id===currentId ? " on" : "");
+    // 置顶绿点
+    if(c.pinned){
+      const dot = document.createElement("span");
+      dot.className = "ci-pin";
+      div.appendChild(dot);
+    }
     const main = document.createElement("div");
     main.className = "ci-main";
     const t = document.createElement("div");
@@ -1500,26 +1795,40 @@ function renderConvoList(keyword){
     const meta = document.createElement("div");
     meta.className = "ci-meta";
     const n = c.log.filter(m=>m.role==="user").length;
-    meta.textContent = `${n} 个提问 · ${fmtDate(c.createdAt)}`
-      + (c.persona && c.persona.trim() ? " · 已设倾向" : "");
+    meta.textContent = `${n} 个提问 · ${fmtDate(c.createdAt)}`;
     main.appendChild(t); main.appendChild(meta);
-    main.addEventListener("click",()=>switchConvo(c.id));
-    // 重命名
-    const rn = document.createElement("button");
-    rn.className = "ci-act";
-    rn.textContent = "✎";
-    rn.title = "重命名";
-    rn.addEventListener("click",(e)=>{ e.stopPropagation(); openRename(c.id); });
-    // 删除
-    const del = document.createElement("button");
-    del.className = "ci-act";
-    del.textContent = "🗑";
-    del.title = "删除";
-    del.addEventListener("click",(e)=>{ e.stopPropagation(); deleteConvo(c.id); });
-    div.appendChild(main); div.appendChild(rn); div.appendChild(del);
+    main.addEventListener("click",()=>{
+      if(suppressClick){ suppressClick=false; return; }
+      switchConvo(c.id);
+    });
+    div.appendChild(main);
+    // 收藏星标
+    if(c.favorite){
+      const star = document.createElement("span");
+      star.className = "ci-star";
+      star.textContent = "★";
+      div.appendChild(star);
+    }
+    // 长按 / 右键 唤出菜单
+    attachLongPress(div, ()=>openConvoMenu(c.id));
     box.appendChild(div);
   });
 }
+
+/* 长按检测：移动端 0.5s 长按，桌面端右键 */
+let suppressClick = false;
+function attachLongPress(el, handler){
+  let timer = null;
+  const start = ()=>{
+    timer = setTimeout(()=>{ suppressClick = true; handler(); }, 500);
+  };
+  const cancel = ()=>{ if(timer){ clearTimeout(timer); timer=null; } };
+  el.addEventListener("touchstart", start, {passive:true});
+  el.addEventListener("touchend", cancel);
+  el.addEventListener("touchmove", cancel);
+  el.addEventListener("contextmenu",(e)=>{ e.preventDefault(); handler(); });
+}
+
 document.getElementById("convoListBtn").addEventListener("click", openDrawer);
 document.getElementById("newChatBtn").addEventListener("click", newConversation);
 document.getElementById("drawerBg").addEventListener("click", closeDrawer);
@@ -1792,7 +2101,7 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
       if(!settings.userName) settings.userName = "我";
       if(!settings.botName) settings.botName = "助手";
       if(!settings.appName) settings.appName = "神经内科知识库";
-      conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider||"claude"; });
+      conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider||"claude"; if(!c.pinned) c.pinned = 0; if(!c.favorite) c.favorite = 0; });
       if(conversations.length===0) conversations.push(newConvoObj());
       if(!curConvo()) currentId = conversations[0].id;
       await Store.set("nkb_settings", JSON.stringify(settings));
@@ -1807,6 +2116,115 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
   };
   reader.onerror = ()=>setBackupHint("文件读取失败。", true);
   reader.readAsText(file);
+});
+
+/* ---------- 收藏夹 ---------- */
+let favTab = "convo";
+function openFav(){
+  favTab = "convo";
+  document.querySelectorAll(".fav-tab").forEach(t=>{
+    t.classList.toggle("on", t.dataset.ft==="convo");
+  });
+  renderFav();
+  openModal("favModal");
+}
+function renderFav(){
+  const box = document.getElementById("favList");
+  box.innerHTML = "";
+  if(favTab==="convo"){
+    const favs = conversations.filter(c=>c.favorite)
+      .sort((a,b)=>b.favorite-a.favorite);
+    if(favs.length===0){
+      box.innerHTML = '<div class="fav-empty">还没有收藏的对话。<br>'
+        + '在侧栏长按对话 → 收藏。</div>';
+      return;
+    }
+    favs.forEach(c=>{
+      const div = document.createElement("div");
+      div.className = "fav-entry";
+      const title = document.createElement("div");
+      title.className = "fe-title";
+      title.textContent = c.title || "新对话";
+      const txt = document.createElement("div");
+      txt.className = "fe-text";
+      const firstUser = c.log.find(m=>m.role==="user");
+      txt.textContent = firstUser ? msgText(firstUser.content) : "（空对话）";
+      const meta = document.createElement("div");
+      meta.className = "fe-meta";
+      const open = document.createElement("span");
+      open.textContent = "打开对话 →";
+      const unfav = document.createElement("button");
+      unfav.textContent = "取消收藏";
+      unfav.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        c.favorite = 0; saveConvos(); renderFav();
+      });
+      meta.appendChild(open); meta.appendChild(unfav);
+      div.appendChild(title); div.appendChild(txt); div.appendChild(meta);
+      div.addEventListener("click",()=>{
+        closeModal("favModal");
+        switchConvo(c.id);
+      });
+      box.appendChild(div);
+    });
+  }else{
+    // 收藏的回复：遍历所有对话的 log
+    const items = [];
+    conversations.forEach(c=>{
+      c.log.forEach((m,idx)=>{
+        if(m.favorite){
+          items.push({ convo:c, msg:m, idx, ts:m.favorite });
+        }
+      });
+    });
+    items.sort((a,b)=>b.ts-a.ts);
+    if(items.length===0){
+      box.innerHTML = '<div class="fav-empty">还没有收藏的回复。<br>'
+        + '在某条回复下点 ☆ 收藏。</div>';
+      return;
+    }
+    items.forEach(it=>{
+      const div = document.createElement("div");
+      div.className = "fav-entry";
+      const title = document.createElement("div");
+      title.className = "fe-title";
+      title.textContent = (it.msg.role==="user" ? "我的提问" : "回复")
+        + " · " + (it.convo.title||"对话");
+      const txt = document.createElement("div");
+      txt.className = "fe-text";
+      txt.textContent = msgText(activeContent(it.msg));
+      const meta = document.createElement("div");
+      meta.className = "fe-meta";
+      const open = document.createElement("span");
+      open.textContent = "打开对话 →";
+      const unfav = document.createElement("button");
+      unfav.textContent = "取消收藏";
+      unfav.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        it.msg.favorite = 0; saveConvos(); renderFav();
+      });
+      meta.appendChild(open); meta.appendChild(unfav);
+      div.appendChild(title); div.appendChild(txt); div.appendChild(meta);
+      div.addEventListener("click",()=>{
+        closeModal("favModal");
+        switchConvo(it.convo.id);
+      });
+      box.appendChild(div);
+    });
+  }
+}
+document.getElementById("favBtn").addEventListener("click", openFav);
+document.getElementById("favClose").addEventListener("click",()=>closeModal("favModal"));
+document.getElementById("favModal").addEventListener("click",e=>{
+  if(e.target.id==="favModal") closeModal("favModal");
+});
+document.querySelectorAll(".fav-tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    favTab = tab.dataset.ft;
+    document.querySelectorAll(".fav-tab").forEach(t=>t.classList.remove("on"));
+    tab.classList.add("on");
+    renderFav();
+  });
 });
 
 /* ---------- PWA：内联 manifest，保持单文件分发 ---------- */
