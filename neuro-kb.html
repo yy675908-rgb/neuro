@@ -19,9 +19,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#f3efe6; --card:#fbf9f4; --ink:#211f1b; --muted:#8b8377;
-    --line:#e3ddcf; --accent:#0c5b5e; --accent-soft:#e4ede9;
-    --user:#1f3d3e; --warn:#a8442a;
+    --paper:#f4f2ed; --card:#fcfbf9; --ink:#242220; --muted:#928b80;
+    --line:#e7e3da; --accent:#0c5b5e; --accent-soft:#e6efeb;
+    --user:#3a5d5e; --user-ink:#f6f4ef; --warn:#a8442a;
     --sans:'Hanken Grotesk',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
     --serif:'Newsreader','Songti SC','PingFang SC',serif;
   }
@@ -34,29 +34,27 @@
   }
   #app{display:flex;flex-direction:column;height:100dvh;}
 
-  header{
-    padding:calc(env(safe-area-inset-top) + 14px) 20px 12px;
-    border-bottom:1px solid var(--line);background:var(--card);flex-shrink:0;
-  }
-  header h1{font-family:var(--serif);font-weight:500;font-size:21px;letter-spacing:.2px;}
-  header h1 em{font-style:italic;color:var(--accent);}
-  header .sub{font-size:12px;color:var(--muted);margin-top:1px;}
-
   .view{flex:1;overflow-y:auto;display:none;-webkit-overflow-scrolling:touch;}
   .view.active{display:flex;flex-direction:column;}
 
-  /* 对话顶栏：常驻，含对话切换 / 倾向 / 新对话 */
+  /* 对话顶栏 */
   #chatBar{flex-shrink:0;display:flex;align-items:center;gap:8px;
-    padding:8px 12px;border-bottom:1px solid var(--line);background:var(--card);}
-  #convoListBtn{flex:1;min-width:0;display:flex;align-items:center;gap:5px;
+    padding:calc(env(safe-area-inset-top) + 9px) 12px 9px;
+    border-bottom:1px solid var(--line);background:var(--card);}
+  .bar-spacer{flex:1;}
+  .icon-btn{flex-shrink:0;width:36px;height:36px;border-radius:9px;
+    border:1px solid var(--line);background:var(--paper);color:var(--ink);
+    font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  #modelBtn{flex-shrink:1;min-width:0;display:flex;align-items:center;gap:4px;
     background:var(--paper);border:1px solid var(--line);border-radius:9px;
-    padding:7px 11px;font-family:var(--sans);font-size:13px;color:var(--ink);cursor:pointer;}
-  #convoTitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
-    white-space:nowrap;text-align:left;}
-  #convoListBtn .caret{color:var(--muted);font-size:11px;flex-shrink:0;}
+    padding:0 11px;height:36px;font-family:var(--sans);font-size:13px;
+    color:var(--ink);cursor:pointer;}
+  #modelLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #modelBtn.unset{color:var(--warn);border-color:var(--warn);}
+  #modelBtn .caret{color:var(--muted);font-size:10px;flex-shrink:0;}
   .bar-btn{flex-shrink:0;border:1px solid var(--line);background:var(--paper);
-    border-radius:9px;padding:7px 11px;font-family:var(--sans);font-size:12.5px;
-    color:var(--accent);font-weight:600;cursor:pointer;}
+    border-radius:9px;height:36px;padding:0 13px;font-family:var(--sans);
+    font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;}
 
   #chatScroll{flex:1;overflow-y:auto;padding:18px 16px 8px;}
   .msg{margin-bottom:18px;display:flex;flex-direction:column;}
@@ -64,7 +62,7 @@
   .bubble{padding:12px 15px;border-radius:14px;font-size:15.5px;line-height:1.65;
     white-space:pre-wrap;word-break:break-word;}
   .msg.user{align-items:flex-end;}
-  .msg.user .bubble{background:var(--user);color:#f3efe6;border-bottom-right-radius:4px;max-width:85%;}
+  .msg.user .bubble{background:var(--user);color:var(--user-ink);border-bottom-right-radius:4px;max-width:85%;}
   .msg.bot .bubble{background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px;}
   .msg.bot .bubble.err{background:#f7e9e4;border-color:#e6c7bc;color:var(--warn);}
   .src{margin-top:7px;font-size:11.5px;color:var(--muted);
@@ -92,7 +90,7 @@
     display:flex;align-items:center;justify-content:center;}
   .send-btn:disabled{background:var(--muted);opacity:.5;}
 
-  .kb-wrap{padding:16px 16px 90px;}
+  .kb-wrap{padding:calc(env(safe-area-inset-top) + 16px) 16px 90px;}
   .kb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
   .kb-top .count{font-size:13px;color:var(--muted);}
   .add-btn{border:none;background:var(--accent);color:#fff;border-radius:10px;
@@ -107,7 +105,7 @@
     color:var(--accent);cursor:pointer;padding:0;font-weight:600;}
   .kb-item .acts button.del{color:var(--warn);}
 
-  .set-wrap{padding:18px 18px 90px;}
+  .set-wrap{padding:calc(env(safe-area-inset-top) + 18px) 18px 90px;}
   .field{margin-bottom:18px;}
   .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}
   .field .desc{font-size:12px;color:var(--muted);margin-bottom:7px;line-height:1.5;}
@@ -168,22 +166,30 @@
   .preset-row button{border:1px solid var(--line);background:var(--card);
     border-radius:8px;padding:7px 10px;font-family:var(--sans);font-size:12px;
     color:var(--accent);cursor:pointer;}
+
+  /* 模型选择 */
+  .model-pick{display:flex;align-items:center;gap:10px;background:var(--card);
+    border:1px solid var(--line);border-radius:11px;padding:13px 14px;
+    margin-bottom:9px;cursor:pointer;}
+  .model-pick.on{border-color:var(--accent);background:var(--accent-soft);}
+  .model-pick .mp-main{flex:1;min-width:0;}
+  .model-pick .mp-name{font-size:14.5px;font-weight:600;}
+  .model-pick .mp-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .model-pick .mp-state{flex-shrink:0;font-size:11.5px;font-weight:600;}
+  .model-pick .mp-state.ready{color:var(--accent);}
+  .model-pick .mp-state.empty{color:var(--warn);}
 </style>
 </head>
 <body>
 <div id="app">
-  <header>
-    <h1>神经<em>内科</em>知识库</h1>
-    <div class="sub" id="statusLine">— 个人查询助手 —</div>
-  </header>
 
   <section class="view active" id="view-chat">
     <div id="chatBar">
-      <button id="convoListBtn">
-        <span id="convoTitle">新对话</span><span class="caret">▾</span>
-      </button>
+      <button class="icon-btn" id="convoListBtn" aria-label="对话列表">☰</button>
+      <button id="modelBtn"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
+      <div class="bar-spacer"></div>
       <button class="bar-btn" id="personaBtn">倾向</button>
-      <button class="bar-btn" id="newChatBtn">＋</button>
+      <button class="icon-btn" id="newChatBtn" aria-label="新对话">＋</button>
     </div>
     <div id="chatScroll"></div>
     <div id="inputBar">
@@ -233,6 +239,14 @@
         <label>默认回复倾向</label>
         <div class="desc">新建对话时默认采用的回答偏好。每个对话仍可在「倾向」里单独修改。</div>
         <textarea id="defaultPersona" rows="3" placeholder="例如：回答简明扼要，先给结论；必要时列出鉴别诊断。"></textarea>
+      </div>
+      <div class="field">
+        <label>对话中的称呼</label>
+        <div class="desc">聊天气泡上方显示的名字，可自定义。</div>
+        <div class="model-row">
+          <input type="text" id="userName" placeholder="我" maxlength="10">
+          <input type="text" id="botName" placeholder="助手" maxlength="10">
+        </div>
       </div>
       <button class="save-btn" id="saveSetBtn">保存设置</button>
       <div class="saved-flash" id="savedFlash"></div>
@@ -290,6 +304,16 @@
   </div>
 </div>
 
+<!-- 模型选择（当前对话） -->
+<div class="modal-bg" id="modelModal">
+  <div class="modal">
+    <h2>这个对话使用的模型</h2>
+    <div class="desc" style="margin-bottom:12px;">
+      切换只影响当前对话，历史上下文会保留。灰色的需要先到「设置」里填密钥。</div>
+    <div id="modelPickList"></div>
+  </div>
+</div>
+
 <script>
 "use strict";
 
@@ -326,9 +350,10 @@ const Store = {
 };
 
 /* ---------- 状态 ---------- */
-let settings = { provider:"claude", keys:{}, models:{}, customBase:"", defaultPersona:"" };
+let settings = { provider:"claude", keys:{}, models:{}, customBase:"",
+                 defaultPersona:"", userName:"我", botName:"助手" };
 let knowledge = [];
-let conversations = [];     // 多个对话，每个 {id,title,createdAt,log,persona}
+let conversations = [];     // 多个对话，每个 {id,title,createdAt,log,persona,provider}
 let currentId = null;       // 当前打开的对话 id
 let editingId = null;
 let busy = false;
@@ -340,7 +365,8 @@ function newConvoObj(){
     title: "新对话",
     createdAt: Date.now(),
     log: [],                            // [{role:'user'|'bot', content, sources?}]
-    persona: settings.defaultPersona || ""
+    persona: settings.defaultPersona || "",
+    provider: settings.provider || "claude"   // 该对话使用的模型提供方
   };
 }
 function curConvo(){
@@ -367,10 +393,13 @@ async function init(){
         if(o.key) settings.keys[settings.provider] = o.key;
         if(o.model) settings.models[settings.provider] = o.model;
       }else{
-        settings = Object.assign({provider:"claude",keys:{},models:{},customBase:"",defaultPersona:""}, o);
+        settings = Object.assign({provider:"claude",keys:{},models:{},customBase:"",
+          defaultPersona:"",userName:"我",botName:"助手"}, o);
       }
     }catch(e){}
   }
+  if(!settings.userName) settings.userName = "我";
+  if(!settings.botName) settings.botName = "助手";
   const k = await Store.get("nkb_knowledge");
   if(k){ try{ knowledge = JSON.parse(k)||[]; }catch(e){} }
 
@@ -388,12 +417,14 @@ async function init(){
         if(oldLog.length){
           conversations.push({
             id:"c"+Date.now(), title:"（之前的对话）",
-            createdAt:Date.now(), log:oldLog, persona:""
+            createdAt:Date.now(), log:oldLog, persona:"", provider:settings.provider
           });
         }
       }catch(e){}
     }
   }
+  // 旧对话补齐 provider 字段
+  conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider || "claude"; });
   // 至少保证有一个对话
   if(conversations.length===0) conversations.push(newConvoObj());
   if(!currentId || !curConvo()) currentId = conversations[0].id;
@@ -407,15 +438,15 @@ async function init(){
 }
 
 function refreshStatus(){
-  const el = document.getElementById("statusLine");
-  const key = settings.keys[settings.provider];
-  if(!key){
-    el.textContent = "未配置模型 — 请到「设置」填入密钥";
-    el.style.color = "var(--warn)";
-  }else{
-    el.textContent = `已连接 ${PROVIDERS[settings.provider].label} · 知识库 ${knowledge.length} 条`;
-    el.style.color = "var(--muted)";
-  }
+  // 更新顶栏模型按钮：显示当前对话所用提供方，未配密钥则标红
+  const convo = curConvo();
+  const prov = convo ? convo.provider : settings.provider;
+  const btn = document.getElementById("modelBtn");
+  const label = document.getElementById("modelLabel");
+  if(!btn || !label) return;
+  label.textContent = PROVIDERS[prov] ? PROVIDERS[prov].label : "模型";
+  const hasKey = !!settings.keys[prov];
+  btn.classList.toggle("unset", !hasKey);
 }
 
 /* ---------- 视图切换 ---------- */
@@ -450,6 +481,8 @@ function captureFields(){
   settings.models[cur] = document.getElementById("modelName").value.trim();
   if(cur==="custom") settings.customBase = document.getElementById("baseUrl").value.trim();
   settings.defaultPersona = document.getElementById("defaultPersona").value;
+  settings.userName = document.getElementById("userName").value.trim() || "我";
+  settings.botName = document.getElementById("botName").value.trim() || "助手";
 }
 function renderSettings(){
   document.querySelectorAll("#provGrid button").forEach(b=>{
@@ -459,6 +492,8 @@ function renderSettings(){
   document.getElementById("apiKey").value = settings.keys[cur] || "";
   document.getElementById("modelName").value = settings.models[cur] || "";
   document.getElementById("defaultPersona").value = settings.defaultPersona || "";
+  document.getElementById("userName").value = settings.userName || "";
+  document.getElementById("botName").value = settings.botName || "";
   const baseField = document.getElementById("baseField");
   if(cur==="custom"){
     baseField.style.display = "block";
@@ -475,6 +510,7 @@ document.getElementById("saveSetBtn").addEventListener("click", async ()=>{
   captureFields();
   await Store.set("nkb_settings", JSON.stringify(settings));
   refreshStatus();
+  renderHistory();          // 称呼可能已更改，重渲染当前对话
   const f = document.getElementById("savedFlash");
   f.textContent = "✓ 已保存";
   setTimeout(()=>{ f.textContent=""; }, 2000);
@@ -643,14 +679,17 @@ function buildSystemPrompt(used, persona){
 
 /* ---------- 模型调用（流式） ---------- */
 // onDelta(textChunk) 每收到一段文本就回调；返回完整文本
-async function callModel(system, history, onDelta){
-  const prov = PROVIDERS[settings.provider];
-  const key = settings.keys[settings.provider] || "";
-  const model = settings.models[settings.provider] || prov.model;
-  let base = settings.provider==="custom" ? (settings.customBase||"") : prov.base;
+// providerKey 指定本次使用哪个提供方（默认回退全局设置）
+async function callModel(system, history, onDelta, providerKey){
+  const pk = providerKey || settings.provider;
+  const prov = PROVIDERS[pk];
+  const key = settings.keys[pk] || "";
+  const model = settings.models[pk] || prov.model;
+  let base = pk==="custom" ? (settings.customBase||"") : prov.base;
   base = base.replace(/\/+$/,"");
 
-  if(settings.provider==="custom" && !base) throw new Error("自定义提供方需要先填写接口地址");
+  if(!key) throw new Error("「" + prov.label + "」还没有配置 API 密钥，请到「设置」里填写");
+  if(pk==="custom" && !base) throw new Error("自定义提供方需要先填写接口地址");
   if(!model) throw new Error("请先在设置里填写模型名称");
 
   let url, headers, body, parseSSE;
@@ -738,7 +777,7 @@ function addMsg(role, text, sources){
   div.className = "msg " + (role==="user"?"user":"bot");
   const who = document.createElement("div");
   who.className = "who";
-  who.textContent = role==="user" ? "我" : "助手";
+  who.textContent = role==="user" ? (settings.userName||"我") : (settings.botName||"助手");
   const bubble = document.createElement("div");
   bubble.className = "bubble" + (role==="err"?" err":"");
   bubble.textContent = text;
@@ -762,8 +801,13 @@ function addMsg(role, text, sources){
 function addTyping(){
   const div = document.createElement("div");
   div.className = "msg bot"; div.id = "typingMsg";
-  div.innerHTML = `<div class="who">助手</div>
-    <div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  const who = document.createElement("div");
+  who.className = "who";
+  who.textContent = settings.botName || "助手";
+  const bub = document.createElement("div");
+  bub.className = "bubble";
+  bub.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  div.appendChild(who); div.appendChild(bub);
   chatScroll.appendChild(div); scrollDown();
 }
 function removeTyping(){ const t=document.getElementById("typingMsg"); if(t) t.remove(); }
@@ -772,7 +816,7 @@ function removeTyping(){ const t=document.getElementById("typingMsg"); if(t) t.r
 function renderHistory(){
   chatScroll.innerHTML = "";
   const convo = curConvo();
-  updateChatBarTitle();
+  refreshStatus();          // 顶栏模型按钮随对话刷新
   if(!convo || !convo.log.length){
     chatScroll.innerHTML = '<div class="empty-hint" id="chatEmpty">'
       + '在下方提出你的神经内科问题。<br>回答会优先依据你自己录入的知识库，并标注引用来源。</div>';
@@ -782,10 +826,6 @@ function renderHistory(){
     if(m.role==="user") addMsg("user", m.content);
     else addMsg("bot", m.content, m.sources||[]);
   });
-}
-function updateChatBarTitle(){
-  const convo = curConvo();
-  document.getElementById("convoTitle").textContent = convo ? convo.title : "新对话";
 }
 
 const qInput = document.getElementById("qInput");
@@ -799,12 +839,13 @@ async function send(){
   if(busy) return;
   const q = qInput.value.trim();
   if(!q) return;
-  if(!settings.keys[settings.provider]){
-    addMsg("err","还没有配置模型密钥。请点底部「设置」，选好提供方并填入 API Key。");
-    return;
-  }
   const convo = curConvo();
   if(!convo) return;
+  if(!settings.keys[convo.provider]){
+    addMsg("err","当前对话使用「" + PROVIDERS[convo.provider].label
+      + "」，但还没有配置它的 API 密钥。请到「设置」填写，或点顶栏模型按钮换一个已配置的。");
+    return;
+  }
 
   busy = true; sendBtn.disabled = true;
   qInput.value = ""; qInput.style.height = "auto";
@@ -816,7 +857,6 @@ async function send(){
   const wasUntitled = (!convo.title || convo.title==="新对话");
   if(wasUntitled){
     convo.title = q.slice(0,16) + (q.length>16 ? "…" : "");
-    updateChatBarTitle();
   }
   addTyping();
 
@@ -838,7 +878,7 @@ async function send(){
       acc += piece;
       bubble.textContent = acc;
       scrollDown();
-    });
+    }, convo.provider);
     if(!bubble){ removeTyping(); addMsg("bot", answer, used); }
     convo.log.push({ role:"bot", content:answer, sources:used.map(e=>({title:e.title})) });
     saveConvos();
@@ -848,7 +888,7 @@ async function send(){
       + "\n\n（如提示网络或 CORS 相关，多为浏览器直连限制，我们下一步再处理。）");
     // 这一轮失败：撤回刚加入的用户消息，避免污染历史与存档
     if(convo.log.length && convo.log[convo.log.length-1].role==="user") convo.log.pop();
-    if(wasUntitled && convo.log.length===0){ convo.title = "新对话"; updateChatBarTitle(); }
+    if(wasUntitled && convo.log.length===0){ convo.title = "新对话"; }
     saveConvos();
   }
   busy = false; sendBtn.disabled = false;
@@ -959,6 +999,60 @@ document.getElementById("personaSave").addEventListener("click",()=>{
     saveConvos();
   }
   closeModal("personaModal");
+});
+
+/* ---------- 模型切换（当前对话） ---------- */
+function renderModelPicker(){
+  const box = document.getElementById("modelPickList");
+  box.innerHTML = "";
+  const convo = curConvo();
+  const cur = convo ? convo.provider : settings.provider;
+  PROV_KEYS.forEach(pk=>{
+    const prov = PROVIDERS[pk];
+    const hasKey = !!settings.keys[pk];
+    const div = document.createElement("div");
+    div.className = "model-pick" + (pk===cur ? " on" : "");
+    const main = document.createElement("div");
+    main.className = "mp-main";
+    const name = document.createElement("div");
+    name.className = "mp-name";
+    name.textContent = prov.label;
+    const meta = document.createElement("div");
+    meta.className = "mp-meta";
+    meta.textContent = settings.models[pk] || prov.model || "（未指定模型）";
+    main.appendChild(name); main.appendChild(meta);
+    const state = document.createElement("div");
+    state.className = "mp-state " + (hasKey ? "ready" : "empty");
+    state.textContent = hasKey ? (pk===cur ? "使用中" : "可用") : "未配置";
+    div.appendChild(main); div.appendChild(state);
+    div.addEventListener("click",()=>{
+      if(!hasKey){
+        // 未配密钥：跳到设置页
+        closeModal("modelModal");
+        settings.provider = pk;
+        renderSettings();
+        document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+        document.querySelector('nav button[data-v="set"]').classList.add("on");
+        document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+        document.getElementById("view-set").classList.add("active");
+        return;
+      }
+      if(convo){
+        convo.provider = pk;
+        saveConvos();
+        refreshStatus();
+      }
+      closeModal("modelModal");
+    });
+    box.appendChild(div);
+  });
+}
+document.getElementById("modelBtn").addEventListener("click",()=>{
+  renderModelPicker();
+  openModal("modelModal");
+});
+document.getElementById("modelModal").addEventListener("click",e=>{
+  if(e.target.id==="modelModal") closeModal("modelModal");
 });
 
 /* ---------- PWA：内联 manifest，保持单文件分发 ---------- */
