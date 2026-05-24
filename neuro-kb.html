@@ -247,11 +247,14 @@
   /* 高层级底部弹窗：从抽屉中弹出的底部菜单用，z-index 高于抽屉(61) */
   .modal-bg.top-sheet{z-index:80;}
   /* 居中弹窗：含输入框的弹窗用，键盘弹起也不会被顶出屏幕
-     z-index 高于抽屉(61)，确保从抽屉中弹出时不被抽屉盖住 */
-  .modal-bg.centered{align-items:center;justify-content:center;padding:20px;z-index:80;}
+     z-index 高于抽屉(61)，确保从抽屉中弹出时不被抽屉盖住
+     动画用淡入+轻微上浮，比缩放柔和 */
+  .modal-bg.centered{align-items:center;justify-content:center;padding:20px;z-index:80;
+    transition:opacity .13s ease;}
   .modal-bg.centered .modal{width:100%;max-width:380px;border-radius:20px;
-    padding:22px 20px;transform:scale(.92);transition:transform .28s var(--ease);}
-  .modal-bg.centered.show .modal{transform:scale(1);}
+    padding:22px 20px;transform:translateY(8px);opacity:0;
+    transition:transform .14s ease, opacity .14s ease;}
+  .modal-bg.centered.show .modal{transform:translateY(0);opacity:1;}
   .modal h2{font-family:var(--serif);font-weight:500;font-size:20px;margin-bottom:16px;}
   .modal textarea{min-height:140px;resize:vertical;line-height:1.6;}
   .modal-acts{display:flex;gap:10px;margin-top:8px;}
@@ -555,7 +558,7 @@
 </div>
 
 <!-- 对话长按菜单 -->
-<div class="modal-bg top-sheet" id="convoMenuModal">
+<div class="modal-bg centered" id="convoMenuModal">
   <div class="modal">
     <h2 id="convoMenuTitle">对话操作</h2>
     <div class="menu-list">
