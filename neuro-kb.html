@@ -22,7 +22,7 @@
     --paper:#f6f5f2; --card:#ffffff; --ink:#2b2926; --muted:#9a948b;
     --line:#ece9e3; --line-soft:#f1efea;
     --accent:#0d6063; --accent-soft:#eef3f1;
-    --user-bg:#dce6e2; --user-ink:#23302e; --warn:#b25138;
+    --user-bg:#c4d6cf; --user-ink:#1d2a27; --warn:#b25138;
     --shadow:0 1px 3px rgba(40,38,34,.05), 0 6px 20px rgba(40,38,34,.06);
     --shadow-lift:0 4px 16px rgba(40,38,34,.10), 0 12px 40px rgba(40,38,34,.12);
     --sans:'Hanken Grotesk',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
@@ -241,8 +241,9 @@
     padding:22px 18px calc(env(safe-area-inset-bottom) + 20px);max-height:88dvh;overflow-y:auto;
     transform:translateY(100%);transition:transform .32s var(--ease);}
   .modal-bg.show .modal{transform:translateY(0);}
-  /* 居中弹窗：含输入框的弹窗用，键盘弹起也不会被顶出屏幕 */
-  .modal-bg.centered{align-items:center;justify-content:center;padding:20px;}
+  /* 居中弹窗：含输入框的弹窗用，键盘弹起也不会被顶出屏幕
+     z-index 高于抽屉(61)，确保从抽屉中弹出时不被抽屉盖住 */
+  .modal-bg.centered{align-items:center;justify-content:center;padding:20px;z-index:80;}
   .modal-bg.centered .modal{width:100%;max-width:380px;border-radius:20px;
     padding:22px 20px;transform:scale(.92);transition:transform .28s var(--ease);}
   .modal-bg.centered.show .modal{transform:scale(1);}
