@@ -44,12 +44,7 @@
   /* 顶栏：与背景融为一体，无深色块、无边框线 */
   #chatBar{flex-shrink:0;display:flex;align-items:center;gap:6px;
     padding:calc(env(safe-area-inset-top) + 8px) 10px 8px;
-    background:var(--paper);border:none;box-shadow:none;
-    position:relative;z-index:2;}
-  /* 顶栏下方一道极淡渐变，柔化内容上滚时的边缘 */
-  #chatBar::after{content:"";position:absolute;left:0;right:0;bottom:-10px;
-    height:10px;background:linear-gradient(var(--paper),transparent);
-    pointer-events:none;}
+    background:var(--paper);border:none;box-shadow:none;}
   .bar-spacer{flex:1;}
   /* 纯图标按钮：无边框无底色 */
   .icon-btn{flex-shrink:0;width:38px;height:38px;border-radius:11px;
@@ -241,12 +236,15 @@
 
   /* 弹窗：底部滑入 */
   .modal-bg{position:fixed;inset:0;background:rgba(35,33,30,.42);z-index:50;
-    display:none;align-items:flex-end;opacity:0;transition:opacity .25s var(--ease);}
+    display:none;align-items:flex-end;opacity:0;transition:opacity .22s var(--ease);}
   .modal-bg.show{display:flex;opacity:1;}
   .modal{background:var(--paper);width:100%;border-radius:24px 24px 0 0;
     padding:22px 18px calc(env(safe-area-inset-bottom) + 20px);max-height:88dvh;overflow-y:auto;
-    transform:translateY(100%);transition:transform .32s var(--ease);}
+    transform:translateY(100%);
+    transition:transform .38s cubic-bezier(.16,.84,.36,1);}
   .modal-bg.show .modal{transform:translateY(0);}
+  /* 高层级底部弹窗：从抽屉中弹出的底部菜单用，z-index 高于抽屉(61) */
+  .modal-bg.top-sheet{z-index:80;}
   /* 居中弹窗：含输入框的弹窗用，键盘弹起也不会被顶出屏幕
      z-index 高于抽屉(61)，确保从抽屉中弹出时不被抽屉盖住 */
   .modal-bg.centered{align-items:center;justify-content:center;padding:20px;z-index:80;}
@@ -279,17 +277,19 @@
   .drawer-search:focus{outline:none;box-shadow:var(--shadow),0 0 0 2px var(--accent-soft);}
   .drawer-list{flex:1;overflow-y:auto;padding:6px 12px 12px;}
 
-  .convo-item{display:flex;align-items:center;gap:4px;background:var(--card);
-    box-shadow:var(--shadow);border-radius:10px;padding:8px 10px;margin-bottom:5px;
-    animation:rise .26s var(--ease);}
+  .convo-item{position:relative;display:flex;align-items:center;gap:4px;
+    background:var(--card);box-shadow:var(--shadow);border-radius:10px;
+    padding:8px 10px;margin-bottom:5px;animation:rise .26s var(--ease);}
   .convo-item.on{box-shadow:var(--shadow),0 0 0 2px var(--accent);}
-  .convo-item .ci-main{flex:1;min-width:0;cursor:pointer;}
+  .convo-item .ci-main{flex:1;min-width:0;cursor:pointer;padding-right:24px;}
   .convo-item .ci-title{font-size:13.5px;font-weight:600;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .convo-item .ci-meta{font-size:10.5px;color:var(--muted);margin-top:1px;}
-  .convo-item .ci-act{flex-shrink:0;background:none;border:none;
-    font-size:11px;cursor:pointer;padding:5px;color:var(--muted);
-    border-radius:7px;transition:background .15s var(--ease);opacity:.7;}
+  /* 删除图标：右下角 */
+  .convo-item .ci-act{position:absolute;right:6px;bottom:5px;
+    background:none;border:none;font-size:11px;cursor:pointer;padding:4px;
+    color:var(--muted);border-radius:7px;opacity:.6;
+    transition:background .15s var(--ease);}
   .convo-item .ci-act:active{background:var(--line);}
   .ci-empty{text-align:center;color:var(--muted);font-family:var(--serif);
     font-style:italic;font-size:14px;padding:30px 16px;}
@@ -554,7 +554,7 @@
 </div>
 
 <!-- 对话长按菜单 -->
-<div class="modal-bg centered" id="convoMenuModal">
+<div class="modal-bg top-sheet" id="convoMenuModal">
   <div class="modal">
     <h2 id="convoMenuTitle">对话操作</h2>
     <div class="menu-list">
