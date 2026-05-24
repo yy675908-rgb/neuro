@@ -44,7 +44,12 @@
   /* 顶栏：与背景融为一体，无深色块、无边框线 */
   #chatBar{flex-shrink:0;display:flex;align-items:center;gap:6px;
     padding:calc(env(safe-area-inset-top) + 8px) 10px 8px;
-    background:var(--paper);}
+    background:var(--paper);border:none;box-shadow:none;
+    position:relative;z-index:2;}
+  /* 顶栏下方一道极淡渐变，柔化内容上滚时的边缘 */
+  #chatBar::after{content:"";position:absolute;left:0;right:0;bottom:-10px;
+    height:10px;background:linear-gradient(var(--paper),transparent);
+    pointer-events:none;}
   .bar-spacer{flex:1;}
   /* 纯图标按钮：无边框无底色 */
   .icon-btn{flex-shrink:0;width:38px;height:38px;border-radius:11px;
@@ -283,8 +288,8 @@
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .convo-item .ci-meta{font-size:10.5px;color:var(--muted);margin-top:1px;}
   .convo-item .ci-act{flex-shrink:0;background:none;border:none;
-    font-size:14px;cursor:pointer;padding:4px;color:var(--muted);
-    border-radius:7px;transition:background .15s var(--ease);}
+    font-size:11px;cursor:pointer;padding:5px;color:var(--muted);
+    border-radius:7px;transition:background .15s var(--ease);opacity:.7;}
   .convo-item .ci-act:active{background:var(--line);}
   .ci-empty{text-align:center;color:var(--muted);font-family:var(--serif);
     font-style:italic;font-size:14px;padding:30px 16px;}
