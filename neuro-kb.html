@@ -67,7 +67,8 @@
     transition:transform .12s var(--ease);}
   .bar-btn:active{transform:scale(.97);}
 
-  #chatScroll{flex:1;overflow-y:auto;padding:14px 16px 8px;}
+  #chatScroll{flex:1;overflow-y:auto;padding:14px 16px 8px;
+    background:var(--paper);overscroll-behavior:none;}
   .msg{margin-bottom:18px;display:flex;flex-direction:column;
     animation:rise .34s var(--ease);}
   @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
