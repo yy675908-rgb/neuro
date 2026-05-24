@@ -6,10 +6,10 @@
 <title>神经内科知识库</title>
 
 <!-- PWA：独立运行所需的系统标识 -->
-<meta name="theme-color" content="#0c5b5e">
+<meta name="theme-color" content="#f6f5f2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="神内知识库">
 <!-- iOS 主屏图标（内联 SVG，base64） -->
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMGM1YjVlIi8+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjNlZmU2IiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGNpcmNsZSBjeD0iOTAiIGN5PSI1OCIgcj0iMTYiLz48Y2lyY2xlIGN4PSI1NCIgY3k9IjEwNCIgcj0iMTQiLz48Y2lyY2xlIGN4PSIxMjYiIGN5PSIxMDQiIHI9IjE0Ii8+PGNpcmNsZSBjeD0iOTAiIGN5PSIxNDAiIHI9IjEzIi8+PHBhdGggZD0iTTkwIDc0djI2TTc4IDY4IDY0IDkyTTEwMiA2OCAxMTYgOTJNNjYgMTE2bDIwIDE4TTExNCAxMTYgOTQgMTM0Ii8+PC9nPjwvc3ZnPg==">
@@ -102,7 +102,8 @@
   .edit-area{width:100%;border:none;background:var(--card);
     box-shadow:var(--shadow),0 0 0 2px var(--accent-soft);
     border-radius:14px;padding:12px 14px;font-family:var(--sans);
-    font-size:15.5px;line-height:1.65;color:var(--ink);resize:vertical;min-height:80px;}
+    font-size:15.5px;line-height:1.65;color:var(--ink);resize:vertical;
+    min-height:200px;max-height:60dvh;}
   .edit-acts{display:flex;gap:9px;margin-top:7px;}
   .msg.user .edit-acts{justify-content:flex-end;}
   .edit-acts button{border:none;border-radius:10px;padding:7px 14px;
@@ -323,7 +324,7 @@
   /* 侧栏对话条：置顶绿点 + 收藏星标 */
   .convo-item .ci-star{flex-shrink:0;color:#d9a441;font-size:13px;}
   .convo-item .ci-pin{flex-shrink:0;width:7px;height:7px;border-radius:50%;
-    background:var(--accent);}
+    background:var(--accent);margin-right:4px;}
   .menu-item .mi-dot{width:9px;height:9px;border-radius:50%;
     background:var(--accent);flex-shrink:0;margin:0 5px 0 6px;}
   .menu-item .mi-star{color:#d9a441;}
@@ -555,7 +556,6 @@
       <button class="menu-item" id="cmPin"><span class="mi-dot"></span><span id="cmPinText">置顶</span></button>
       <button class="menu-item" id="cmRename"><span class="mi-ico">✎</span>重命名</button>
       <button class="menu-item" id="cmFav"><span class="mi-ico mi-star">★</span><span id="cmFavText">收藏此对话</span></button>
-      <button class="menu-item danger" id="cmDelete"><span class="mi-ico">🗑</span>删除对话</button>
     </div>
     <div class="modal-acts" style="margin-top:8px;">
       <button class="btn-cancel" id="convoMenuClose">取消</button>
@@ -1338,6 +1338,11 @@ function startEdit(msgDiv, logIndex, role){
   acts.appendChild(cancel); acts.appendChild(ok);
   msgDiv.appendChild(ta); msgDiv.appendChild(acts);
   ta.focus();
+  // 按内容自动撑高（上限由 CSS 的 max-height 控制）
+  const autoGrow = ()=>{ ta.style.height="auto";
+    ta.style.height = Math.min(ta.scrollHeight, window.innerHeight*0.58) + "px"; };
+  autoGrow();
+  ta.addEventListener("input", autoGrow);
 
   const exitEdit = ()=>{ ta.remove(); acts.remove();
     msgDiv.querySelectorAll(".bubble,.msg-acts,.msg-imgs,.src").forEach(el=>el.style.display=""); };
@@ -1753,10 +1758,6 @@ document.getElementById("cmFav").addEventListener("click",()=>{
     renderConvoList(document.getElementById("convoSearch").value); }
   closeModal("convoMenuModal");
 });
-document.getElementById("cmDelete").addEventListener("click",()=>{
-  closeModal("convoMenuModal");
-  setTimeout(()=>deleteConvo(menuConvoId), 200);
-});
 
 /* 列表渲染，支持关键词过滤 */
 function renderConvoList(keyword){
@@ -1809,6 +1810,13 @@ function renderConvoList(keyword){
       star.textContent = "★";
       div.appendChild(star);
     }
+    // 末尾删除图标
+    const del = document.createElement("button");
+    del.className = "ci-act";
+    del.textContent = "🗑";
+    del.title = "删除";
+    del.addEventListener("click",(e)=>{ e.stopPropagation(); deleteConvo(c.id); });
+    div.appendChild(del);
     // 长按 / 右键 唤出菜单
     attachLongPress(div, ()=>openConvoMenu(c.id));
     box.appendChild(div);
@@ -2241,7 +2249,7 @@ document.querySelectorAll(".fav-tab").forEach(tab=>{
     display: "standalone",
     orientation: "portrait",
     background_color: "#f3efe6",
-    theme_color: "#0c5b5e",
+    theme_color: "#f6f5f2",
     icons: [
       { src: ICON, sizes: "any", type: "image/svg+xml", purpose: "any" },
       { src: ICON, sizes: "any", type: "image/svg+xml", purpose: "maskable" }
