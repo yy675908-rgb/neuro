@@ -169,6 +169,39 @@
   .kb-item .acts button{background:none;border:none;font-family:var(--sans);font-size:12.5px;
     color:var(--accent);cursor:pointer;padding:0;font-weight:600;}
   .kb-item .acts button.del{color:var(--warn);}
+  /* 知识库搜索框 */
+  .kb-search{width:100%;border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:12px;padding:11px 14px;font-family:var(--sans);font-size:14.5px;
+    color:var(--ink);margin-bottom:10px;}
+  .kb-search:focus{outline:none;box-shadow:var(--shadow),0 0 0 2px var(--accent-soft);}
+  /* 标签筛选区 */
+  .kb-filter-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+  .kb-filter-tags:empty{margin-bottom:0;}
+  /* 标签通用样式（筛选区、选择区、条目上） */
+  .tag-chip{border:none;border-radius:8px;padding:5px 10px;font-family:var(--sans);
+    font-size:11.5px;cursor:pointer;background:var(--card);box-shadow:var(--shadow);
+    color:var(--muted);transition:transform .12s var(--ease);}
+  .tag-chip:active{transform:scale(.95);}
+  .tag-chip.on{background:var(--accent);color:#fff;}
+  .tag-chip .tg-group{opacity:.6;font-size:10px;margin-right:3px;}
+  /* 条目上的标签（只读小标签） */
+  .kb-item .kb-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;}
+  .kb-item .kb-tags span{background:var(--accent-soft);color:var(--accent);
+    padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;}
+  /* 编辑弹窗里的标签选择 */
+  .kb-tag-pick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .kb-tag-pick:empty::before{content:"还没有标签，先在下方添加";
+    color:var(--muted);font-size:12px;font-style:italic;}
+  .kb-tag-add{display:flex;gap:6px;}
+  .kb-tag-add input{flex:1;min-width:0;border:none;background:var(--card);
+    box-shadow:var(--shadow);border-radius:10px;padding:9px 11px;
+    font-family:var(--sans);font-size:13.5px;color:var(--ink);}
+  .kb-tag-add select{border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:10px;padding:9px 6px;font-family:var(--sans);font-size:12.5px;
+    color:var(--ink);}
+  .kb-tag-add button{border:none;background:var(--accent);color:#fff;
+    border-radius:10px;padding:0 14px;font-family:var(--sans);font-size:13px;
+    font-weight:600;cursor:pointer;}
 
   .set-wrap{padding:calc(env(safe-area-inset-top) + 20px) 18px 90px;}
   .field{margin-bottom:20px;}
@@ -398,6 +431,8 @@
         <span class="count" id="kbCount">共 0 条</span>
         <button class="add-btn" id="addKbBtn">＋ 新增条目</button>
       </div>
+      <input type="text" id="kbSearch" class="kb-search" placeholder="搜索标题或内容…">
+      <div id="kbFilterTags" class="kb-filter-tags"></div>
       <div id="kbList"></div>
     </div>
   </section>
@@ -486,6 +521,21 @@
     <div class="field">
       <label>内容</label>
       <textarea id="kbContent" placeholder="录入这条知识的正文…"></textarea>
+    </div>
+    <div class="field">
+      <label>标签</label>
+      <div class="desc">点已有标签选中／取消；或在下方输入新标签。一条知识可打多个标签。</div>
+      <div id="kbTagPick" class="kb-tag-pick"></div>
+      <div class="kb-tag-add">
+        <input type="text" id="kbNewTag" placeholder="新标签名">
+        <select id="kbNewTagGroup">
+          <option value="主题">主题</option>
+          <option value="来源">来源</option>
+          <option value="学派">学派</option>
+          <option value="其他">其他</option>
+        </select>
+        <button type="button" id="kbAddTagBtn">添加</button>
+      </div>
     </div>
     <div class="modal-acts">
       <button class="btn-cancel" id="kbCancel">取消</button>
@@ -623,6 +673,70 @@ const Store = {
   }
 };
 
+/* ---------- 知识库存储：IndexedDB，可扛上千条 ----------
+   两个对象仓库：entries（知识条目）、tags（标签）
+   IndexedDB 不可用时回退 localStorage */
+const KBStore = {
+  _db: null,
+  _ready: null,
+  open(){
+    if(this._ready) return this._ready;
+    this._ready = new Promise((resolve)=>{
+      if(!window.indexedDB){ resolve(null); return; }
+      let req;
+      try{ req = indexedDB.open("neuro_kb", 1); }
+      catch(e){ resolve(null); return; }
+      req.onupgradeneeded = (e)=>{
+        const db = e.target.result;
+        if(!db.objectStoreNames.contains("entries"))
+          db.createObjectStore("entries", {keyPath:"id"});
+        if(!db.objectStoreNames.contains("tags"))
+          db.createObjectStore("tags", {keyPath:"id"});
+      };
+      req.onsuccess = (e)=>{ this._db = e.target.result; resolve(this._db); };
+      req.onerror = ()=>resolve(null);
+    });
+    return this._ready;
+  },
+  async _all(storeName){
+    const db = await this.open();
+    if(!db){
+      // 回退：localStorage
+      try{ return JSON.parse(localStorage.getItem("nkb_"+storeName)||"[]"); }
+      catch(e){ return []; }
+    }
+    return new Promise((resolve)=>{
+      try{
+        const tx = db.transaction(storeName,"readonly");
+        const req = tx.objectStore(storeName).getAll();
+        req.onsuccess = ()=>resolve(req.result||[]);
+        req.onerror = ()=>resolve([]);
+      }catch(e){ resolve([]); }
+    });
+  },
+  async _put(storeName, items){
+    const db = await this.open();
+    if(!db){
+      try{ localStorage.setItem("nkb_"+storeName, JSON.stringify(items)); }catch(e){}
+      return;
+    }
+    return new Promise((resolve)=>{
+      try{
+        const tx = db.transaction(storeName,"readwrite");
+        const st = tx.objectStore(storeName);
+        st.clear();
+        items.forEach(it=>st.put(it));
+        tx.oncomplete = ()=>resolve();
+        tx.onerror = ()=>resolve();
+      }catch(e){ resolve(); }
+    });
+  },
+  getEntries(){ return this._all("entries"); },
+  getTags(){ return this._all("tags"); },
+  saveEntries(items){ return this._put("entries", items); },
+  saveTags(items){ return this._put("tags", items); }
+};
+
 /* ---------- 状态 ---------- */
 let settings = { provider:"claude", keys:{}, models:{}, customBase:"",
                  defaultPersona:"", userName:"我", botName:"助手",
@@ -634,6 +748,7 @@ let editingId = null;
 let busy = false;
 let pendingImages = [];      // 待发送的图片 [{dataUrl, mediaType, data}]
 let abortCtrl = null;        // 当前请求的中止控制器
+let tags = [];               // 标签 [{id,name,group}]
 
 /* ---------- 工具函数 ---------- */
 function newConvoObj(){
@@ -680,8 +795,30 @@ async function init(){
   if(!settings.userName) settings.userName = "我";
   if(!settings.botName) settings.botName = "助手";
   if(!settings.appName) settings.appName = "神经内科知识库";
-  const k = await Store.get("nkb_knowledge");
-  if(k){ try{ knowledge = JSON.parse(k)||[]; }catch(e){} }
+
+  // 知识库：从 IndexedDB 读取
+  knowledge = await KBStore.getEntries();
+  tags = await KBStore.getTags();
+  // 迁移：旧版本知识库存在 localStorage 的 nkb_knowledge 里
+  if(knowledge.length===0){
+    const oldK = await Store.get("nkb_knowledge");
+    if(oldK){
+      try{
+        const arr = JSON.parse(oldK)||[];
+        if(arr.length){
+          // 旧条目没有 tags 字段，补上空数组
+          knowledge = arr.map(e=>({
+            id: e.id || ("k"+Date.now()+Math.random().toString(36).slice(2,6)),
+            title: e.title||"", content: e.content||"",
+            tags: e.tags||[],
+            createdAt: e.createdAt||Date.now(),
+            updatedAt: e.updatedAt||Date.now()
+          }));
+          await KBStore.saveEntries(knowledge);
+        }
+      }catch(e){}
+    }
+  }
 
   const cv = await Store.get("nkb_convos");
   if(cv){ try{ conversations = JSON.parse(cv)||[]; }catch(e){} }
@@ -944,32 +1081,142 @@ document.getElementById("modelNameManual").addEventListener("click",()=>{
 });
 
 /* ---------- 知识库 ---------- */
+let kbFilterTagIds = [];      // 当前筛选选中的标签 id
+let kbSearchKw = "";          // 当前搜索关键词
+let kbEditingTagIds = [];     // 编辑弹窗中当前条目已选标签
+
+const TAG_GROUP_ORDER = ["主题","来源","学派","其他"];
+
+function tagById(id){ return tags.find(t=>t.id===id) || null; }
+
+/* 渲染顶部标签筛选区 */
+function renderKbFilter(){
+  const box = document.getElementById("kbFilterTags");
+  box.innerHTML = "";
+  if(tags.length===0) return;
+  // 按分组排序展示
+  const sorted = tags.slice().sort((a,b)=>{
+    const ai = TAG_GROUP_ORDER.indexOf(a.group), bi = TAG_GROUP_ORDER.indexOf(b.group);
+    return (ai<0?9:ai) - (bi<0?9:bi);
+  });
+  sorted.forEach(t=>{
+    const btn = document.createElement("button");
+    btn.className = "tag-chip" + (kbFilterTagIds.includes(t.id) ? " on" : "");
+    btn.innerHTML = '<span class="tg-group">'+(t.group||"")+'</span>';
+    btn.appendChild(document.createTextNode(t.name));
+    btn.addEventListener("click",()=>{
+      const i = kbFilterTagIds.indexOf(t.id);
+      if(i>=0) kbFilterTagIds.splice(i,1);
+      else kbFilterTagIds.push(t.id);
+      renderKb();
+    });
+    box.appendChild(btn);
+  });
+}
+
+/* 过滤后的条目列表 */
+function filteredKb(){
+  let list = knowledge.slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  const kw = kbSearchKw.trim().toLowerCase();
+  if(kw){
+    list = list.filter(e=>
+      (e.title||"").toLowerCase().includes(kw) ||
+      (e.content||"").toLowerCase().includes(kw));
+  }
+  // 标签筛选：条目须包含所有选中的标签（与逻辑）
+  if(kbFilterTagIds.length){
+    list = list.filter(e=>
+      kbFilterTagIds.every(tid=>(e.tags||[]).includes(tid)));
+  }
+  return list;
+}
+
 function renderKb(){
+  renderKbFilter();
   const list = document.getElementById("kbList");
-  document.getElementById("kbCount").textContent = `共 ${knowledge.length} 条`;
+  const items = filteredKb();
+  const filtering = kbSearchKw.trim() || kbFilterTagIds.length;
+  document.getElementById("kbCount").textContent =
+    filtering ? `${items.length} / ${knowledge.length} 条` : `共 ${knowledge.length} 条`;
   list.innerHTML = "";
   if(knowledge.length===0){
     list.innerHTML = `<div class="empty-hint" style="padding:30px 10px;">
       还没有知识条目。<br>点上方「新增条目」把你的笔记、要点录进来。</div>`;
     return;
   }
-  knowledge.forEach(item=>{
+  if(items.length===0){
+    list.innerHTML = `<div class="empty-hint" style="padding:30px 10px;">
+      没有符合条件的条目。</div>`;
+    return;
+  }
+  items.forEach(item=>{
     const div = document.createElement("div");
     div.className = "kb-item";
-    div.innerHTML = `<h3></h3><p></p>
-      <div class="acts"><button class="edit">编辑</button><button class="del">删除</button></div>`;
-    div.querySelector("h3").textContent = item.title || "(无标题)";
-    div.querySelector("p").textContent = item.content || "";
-    div.querySelector(".edit").addEventListener("click",()=>openKbModal(item));
-    div.querySelector(".del").addEventListener("click",()=>delKb(item.id));
+    const h = document.createElement("h3");
+    h.textContent = item.title || "(无标题)";
+    const p = document.createElement("p");
+    p.textContent = item.content || "";
+    div.appendChild(h); div.appendChild(p);
+    // 标签
+    if((item.tags||[]).length){
+      const tg = document.createElement("div");
+      tg.className = "kb-tags";
+      item.tags.forEach(tid=>{
+        const t = tagById(tid);
+        if(t){
+          const s = document.createElement("span");
+          s.textContent = t.name;
+          tg.appendChild(s);
+        }
+      });
+      div.appendChild(tg);
+    }
+    const acts = document.createElement("div");
+    acts.className = "acts";
+    const editBtn = document.createElement("button");
+    editBtn.className = "edit"; editBtn.textContent = "编辑";
+    editBtn.addEventListener("click",()=>openKbModal(item));
+    const delBtn = document.createElement("button");
+    delBtn.className = "del"; delBtn.textContent = "删除";
+    delBtn.addEventListener("click",()=>delKb(item.id));
+    acts.appendChild(editBtn); acts.appendChild(delBtn);
+    div.appendChild(acts);
     list.appendChild(div);
   });
 }
+
+/* 编辑弹窗里渲染标签选择区 */
+function renderKbTagPick(){
+  const box = document.getElementById("kbTagPick");
+  box.innerHTML = "";
+  const sorted = tags.slice().sort((a,b)=>{
+    const ai = TAG_GROUP_ORDER.indexOf(a.group), bi = TAG_GROUP_ORDER.indexOf(b.group);
+    return (ai<0?9:ai) - (bi<0?9:bi);
+  });
+  sorted.forEach(t=>{
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tag-chip" + (kbEditingTagIds.includes(t.id) ? " on" : "");
+    btn.innerHTML = '<span class="tg-group">'+(t.group||"")+'</span>';
+    btn.appendChild(document.createTextNode(t.name));
+    btn.addEventListener("click",()=>{
+      const i = kbEditingTagIds.indexOf(t.id);
+      if(i>=0) kbEditingTagIds.splice(i,1);
+      else kbEditingTagIds.push(t.id);
+      renderKbTagPick();
+    });
+    box.appendChild(btn);
+  });
+}
+
 function openKbModal(item){
   editingId = item ? item.id : null;
   document.getElementById("kbModalTitle").textContent = item ? "编辑条目" : "新增条目";
   document.getElementById("kbTitle").value = item ? item.title : "";
   document.getElementById("kbContent").value = item ? item.content : "";
+  kbEditingTagIds = item ? (item.tags||[]).slice() : [];
+  document.getElementById("kbNewTag").value = "";
+  renderKbTagPick();
   openModal("kbModal");
 }
 document.getElementById("addKbBtn").addEventListener("click",()=>openKbModal(null));
@@ -977,25 +1224,52 @@ document.getElementById("kbCancel").addEventListener("click",()=>closeModal("kbM
 document.getElementById("kbModal").addEventListener("click",e=>{
   if(e.target.id==="kbModal") closeModal("kbModal");
 });
+
+/* 添加新标签 */
+document.getElementById("kbAddTagBtn").addEventListener("click", async ()=>{
+  const name = document.getElementById("kbNewTag").value.trim();
+  if(!name) return;
+  const group = document.getElementById("kbNewTagGroup").value;
+  // 同名标签已存在则直接选中，不重复创建
+  let existing = tags.find(t=>t.name===name);
+  if(!existing){
+    existing = { id:"t"+Date.now()+Math.random().toString(36).slice(2,5),
+                 name, group };
+    tags.push(existing);
+    await KBStore.saveTags(tags);
+  }
+  if(!kbEditingTagIds.includes(existing.id)) kbEditingTagIds.push(existing.id);
+  document.getElementById("kbNewTag").value = "";
+  renderKbTagPick();
+});
+
 document.getElementById("kbSave").addEventListener("click", async ()=>{
   const t = document.getElementById("kbTitle").value.trim();
   const c = document.getElementById("kbContent").value.trim();
   if(!t && !c){ closeModal("kbModal"); return; }
+  const now = Date.now();
   if(editingId){
     const it = knowledge.find(x=>x.id===editingId);
-    if(it){ it.title=t; it.content=c; }
+    if(it){ it.title=t; it.content=c; it.tags=kbEditingTagIds.slice(); it.updatedAt=now; }
   }else{
-    knowledge.push({ id:"k"+Date.now(), title:t, content:c });
+    knowledge.push({ id:"k"+now+Math.random().toString(36).slice(2,5),
+      title:t, content:c, tags:kbEditingTagIds.slice(),
+      createdAt:now, updatedAt:now });
   }
-  await Store.set("nkb_knowledge", JSON.stringify(knowledge));
+  await KBStore.saveEntries(knowledge);
   closeModal("kbModal"); renderKb(); refreshStatus();
 });
 async function delKb(id){
   if(!confirm("删除这条知识？")) return;
   knowledge = knowledge.filter(x=>x.id!==id);
-  await Store.set("nkb_knowledge", JSON.stringify(knowledge));
+  await KBStore.saveEntries(knowledge);
   renderKb(); refreshStatus();
 }
+/* 搜索框 */
+document.getElementById("kbSearch").addEventListener("input",e=>{
+  kbSearchKw = e.target.value;
+  renderKb();
+});
 
 /* ---------- 检索：中文友好的二元字组匹配 ---------- */
 function bigrams(s){
@@ -2075,9 +2349,9 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
   try{
     const dump = {
       _app: "neuro-kb",
-      _version: 5,
+      _version: 6,
       _exportedAt: new Date().toISOString(),
-      settings, knowledge, conversations, currentId
+      settings, knowledge, tags, conversations, currentId
     };
     const blob = new Blob([JSON.stringify(dump,null,2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
@@ -2112,7 +2386,17 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
     if(!confirm("导入备份会覆盖当前所有对话、知识库和设置，确定继续？")) return;
     try{
       if(dump.settings) settings = dump.settings;
-      if(Array.isArray(dump.knowledge)) knowledge = dump.knowledge;
+      if(Array.isArray(dump.knowledge)){
+        // 兼容旧备份：条目可能没有 tags/时间戳字段
+        knowledge = dump.knowledge.map(e=>({
+          id: e.id || ("k"+Date.now()+Math.random().toString(36).slice(2,5)),
+          title: e.title||"", content: e.content||"",
+          tags: e.tags||[],
+          createdAt: e.createdAt||Date.now(),
+          updatedAt: e.updatedAt||Date.now()
+        }));
+      }
+      tags = Array.isArray(dump.tags) ? dump.tags : [];
       if(Array.isArray(dump.conversations)) conversations = dump.conversations;
       if(dump.currentId) currentId = dump.currentId;
       if(!settings.userName) settings.userName = "我";
@@ -2122,8 +2406,12 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
       if(conversations.length===0) conversations.push(newConvoObj());
       if(!curConvo()) currentId = conversations[0].id;
       await Store.set("nkb_settings", JSON.stringify(settings));
-      await Store.set("nkb_knowledge", JSON.stringify(knowledge));
+      await KBStore.saveEntries(knowledge);
+      await KBStore.saveTags(tags);
       await saveConvos();
+      // 重置筛选状态
+      kbFilterTagIds = []; kbSearchKw = "";
+      document.getElementById("kbSearch").value = "";
       buildProvGrid(); renderSettings(); renderKb();
       refreshStatus(); applyAppName(); renderHistory();
       setBackupHint("✓ 导入成功，数据已恢复。");
