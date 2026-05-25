@@ -192,16 +192,16 @@
   .kb-tag-pick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
   .kb-tag-pick:empty::before{content:"还没有标签，先在下方添加";
     color:var(--muted);font-size:12px;font-style:italic;}
-  .kb-tag-add{display:flex;gap:7px;align-items:stretch;}
-  .kb-tag-add select{flex-shrink:0;border:none;background:var(--card);
-    box-shadow:var(--shadow);border-radius:11px;padding:11px 8px;
-    font-family:var(--sans);font-size:14px;color:var(--ink);}
-  .kb-tag-add input{flex:1;min-width:0;border:none;background:var(--card);
+  .kb-tag-add{display:flex;gap:7px;align-items:stretch;width:100%;}
+  .kb-tag-add select{flex:0 0 76px;width:76px;min-width:0;border:none;
+    background:var(--card);box-shadow:var(--shadow);border-radius:11px;
+    padding:11px 4px;font-family:var(--sans);font-size:13.5px;color:var(--ink);}
+  .kb-tag-add input{flex:1 1 auto;min-width:0;border:none;background:var(--card);
     box-shadow:var(--shadow);border-radius:11px;padding:11px 13px;
     font-family:var(--sans);font-size:14.5px;color:var(--ink);}
   .kb-tag-add input:focus{outline:none;box-shadow:var(--shadow),0 0 0 2px var(--accent-soft);}
-  .kb-tag-add button{flex-shrink:0;border:none;background:var(--accent);color:#fff;
-    border-radius:11px;padding:0 16px;font-family:var(--sans);font-size:14px;
+  .kb-tag-add button{flex:0 0 auto;border:none;background:var(--accent);color:#fff;
+    border-radius:11px;padding:0 15px;font-family:var(--sans);font-size:14px;
     font-weight:600;cursor:pointer;white-space:nowrap;}
 
   .set-wrap{padding:calc(env(safe-area-inset-top) + 20px) 18px 90px;}
@@ -273,10 +273,13 @@
   .modal-bg{position:fixed;inset:0;background:rgba(35,33,30,.42);z-index:50;
     display:none;align-items:flex-end;opacity:0;transition:opacity .22s var(--ease);}
   .modal-bg.show{display:flex;opacity:1;}
-  .modal{background:var(--paper);width:100%;border-radius:24px 24px 0 0;
-    padding:22px 18px calc(env(safe-area-inset-bottom) + 20px);max-height:88dvh;overflow-y:auto;
+  .modal{background:var(--paper);width:100%;box-sizing:border-box;
+    border-radius:24px 24px 0 0;
+    padding:22px 18px calc(env(safe-area-inset-bottom) + 20px);
+    max-height:88dvh;overflow-y:auto;overflow-x:hidden;
     transform:translateY(100%);
     transition:transform .38s cubic-bezier(.16,.84,.36,1);}
+  .modal *{max-width:100%;box-sizing:border-box;}
   .modal-bg.show .modal{transform:translateY(0);}
   /* 高层级底部弹窗：从抽屉中弹出的底部菜单用，z-index 高于抽屉(61) */
   .modal-bg.top-sheet{z-index:80;}
