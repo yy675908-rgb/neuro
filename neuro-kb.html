@@ -192,16 +192,17 @@
   .kb-tag-pick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
   .kb-tag-pick:empty::before{content:"还没有标签，先在下方添加";
     color:var(--muted);font-size:12px;font-style:italic;}
-  .kb-tag-add{display:flex;gap:6px;}
+  .kb-tag-add{display:flex;gap:7px;align-items:stretch;}
+  .kb-tag-add select{flex-shrink:0;border:none;background:var(--card);
+    box-shadow:var(--shadow);border-radius:11px;padding:11px 8px;
+    font-family:var(--sans);font-size:14px;color:var(--ink);}
   .kb-tag-add input{flex:1;min-width:0;border:none;background:var(--card);
-    box-shadow:var(--shadow);border-radius:10px;padding:9px 11px;
-    font-family:var(--sans);font-size:13.5px;color:var(--ink);}
-  .kb-tag-add select{border:none;background:var(--card);box-shadow:var(--shadow);
-    border-radius:10px;padding:9px 6px;font-family:var(--sans);font-size:12.5px;
-    color:var(--ink);}
-  .kb-tag-add button{border:none;background:var(--accent);color:#fff;
-    border-radius:10px;padding:0 14px;font-family:var(--sans);font-size:13px;
-    font-weight:600;cursor:pointer;}
+    box-shadow:var(--shadow);border-radius:11px;padding:11px 13px;
+    font-family:var(--sans);font-size:14.5px;color:var(--ink);}
+  .kb-tag-add input:focus{outline:none;box-shadow:var(--shadow),0 0 0 2px var(--accent-soft);}
+  .kb-tag-add button{flex-shrink:0;border:none;background:var(--accent);color:#fff;
+    border-radius:11px;padding:0 16px;font-family:var(--sans);font-size:14px;
+    font-weight:600;cursor:pointer;white-space:nowrap;}
 
   .set-wrap{padding:calc(env(safe-area-inset-top) + 20px) 18px 90px;}
   .field{margin-bottom:20px;}
@@ -431,7 +432,7 @@
         <span class="count" id="kbCount">共 0 条</span>
         <button class="add-btn" id="addKbBtn">＋ 新增条目</button>
       </div>
-      <input type="text" id="kbSearch" class="kb-search" placeholder="搜索标题或内容…">
+      <input type="text" id="kbSearch" class="kb-search" placeholder="搜索标题、内容或标签…">
       <div id="kbFilterTags" class="kb-filter-tags"></div>
       <div id="kbList"></div>
     </div>
@@ -524,16 +525,19 @@
     </div>
     <div class="field">
       <label>标签</label>
-      <div class="desc">点已有标签选中／取消；或在下方输入新标签。一条知识可打多个标签。</div>
+      <div class="desc">点已有标签可选中或取消；删除标签用长按。在下方可添加新标签。</div>
       <div id="kbTagPick" class="kb-tag-pick"></div>
       <div class="kb-tag-add">
-        <input type="text" id="kbNewTag" placeholder="新标签名">
         <select id="kbNewTagGroup">
-          <option value="主题">主题</option>
-          <option value="来源">来源</option>
-          <option value="学派">学派</option>
+          <option value="中医">中医</option>
+          <option value="西医">西医</option>
+          <option value="症状">症状</option>
+          <option value="疾病">疾病</option>
+          <option value="人物">人物</option>
+          <option value="机制">机制</option>
           <option value="其他">其他</option>
         </select>
+        <input type="text" id="kbNewTag" placeholder="输入新标签名">
         <button type="button" id="kbAddTagBtn">添加</button>
       </div>
     </div>
@@ -1085,7 +1089,7 @@ let kbFilterTagIds = [];      // 当前筛选选中的标签 id
 let kbSearchKw = "";          // 当前搜索关键词
 let kbEditingTagIds = [];     // 编辑弹窗中当前条目已选标签
 
-const TAG_GROUP_ORDER = ["主题","来源","学派","其他"];
+const TAG_GROUP_ORDER = ["中医","西医","症状","疾病","人物","机制","其他"];
 
 function tagById(id){ return tags.find(t=>t.id===id) || null; }
 
@@ -1119,9 +1123,15 @@ function filteredKb(){
   let list = knowledge.slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   const kw = kbSearchKw.trim().toLowerCase();
   if(kw){
-    list = list.filter(e=>
-      (e.title||"").toLowerCase().includes(kw) ||
-      (e.content||"").toLowerCase().includes(kw));
+    list = list.filter(e=>{
+      if((e.title||"").toLowerCase().includes(kw)) return true;
+      if((e.content||"").toLowerCase().includes(kw)) return true;
+      // 也搜标签名：条目的标签里有名字匹配的
+      return (e.tags||[]).some(tid=>{
+        const t = tagById(tid);
+        return t && t.name.toLowerCase().includes(kw);
+      });
+    });
   }
   // 标签筛选：条目须包含所有选中的标签（与逻辑）
   if(kbFilterTagIds.length){
@@ -1205,8 +1215,31 @@ function renderKbTagPick(){
       else kbEditingTagIds.push(t.id);
       renderKbTagPick();
     });
+    // 长按删除标签
+    attachLongPress(btn, ()=>deleteTag(t));
     box.appendChild(btn);
   });
+}
+
+/* 删除一个标签：标签本身删掉，所有条目去掉这个标签，条目保留 */
+async function deleteTag(t){
+  if(!confirm('删除标签「'+t.name+'」？\n用到它的知识条目会保留，只是去掉这个标签。')) return;
+  tags = tags.filter(x=>x.id!==t.id);
+  // 从所有条目中移除该标签
+  let changed = false;
+  knowledge.forEach(e=>{
+    if(e.tags && e.tags.includes(t.id)){
+      e.tags = e.tags.filter(id=>id!==t.id);
+      changed = true;
+    }
+  });
+  // 从当前编辑态、筛选态移除
+  kbEditingTagIds = kbEditingTagIds.filter(id=>id!==t.id);
+  kbFilterTagIds = kbFilterTagIds.filter(id=>id!==t.id);
+  await KBStore.saveTags(tags);
+  if(changed) await KBStore.saveEntries(knowledge);
+  renderKbTagPick();
+  renderKb();
 }
 
 function openKbModal(item){
@@ -2111,7 +2144,7 @@ let suppressClick = false;
 function attachLongPress(el, handler){
   let timer = null;
   const start = ()=>{
-    timer = setTimeout(()=>{ suppressClick = true; handler(); }, 500);
+    timer = setTimeout(()=>{ suppressClick = true; handler(); }, 400);
   };
   const cancel = ()=>{ if(timer){ clearTimeout(timer); timer=null; } };
   el.addEventListener("touchstart", start, {passive:true});
