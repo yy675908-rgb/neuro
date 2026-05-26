@@ -1,0 +1,2994 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>神经内科知识库</title>
+
+<!-- PWA：独立运行所需的系统标识 -->
+<meta name="theme-color" content="#f6f5f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="神内知识库">
+<!-- iOS 主屏图标（内联 SVG，base64） -->
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMGM1YjVlIi8+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjNlZmU2IiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGNpcmNsZSBjeD0iOTAiIGN5PSI1OCIgcj0iMTYiLz48Y2lyY2xlIGN4PSI1NCIgY3k9IjEwNCIgcj0iMTQiLz48Y2lyY2xlIGN4PSIxMjYiIGN5PSIxMDQiIHI9IjE0Ii8+PGNpcmNsZSBjeD0iOTAiIGN5PSIxNDAiIHI9IjEzIi8+PHBhdGggZD0iTTkwIDc0djI2TTc4IDY4IDY0IDkyTTEwMiA2OCAxMTYgOTJNNjYgMTE2bDIwIDE4TTExNCAxMTYgOTQgMTM0Ii8+PC9nPjwvc3ZnPg==">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f6f5f2; --card:#ffffff; --ink:#2b2926; --muted:#9a948b;
+    --line:#ece9e3; --line-soft:#f1efea;
+    --accent:#0d6063; --accent-soft:#eef3f1;
+    --user-bg:#d4e9e4; --user-ink:#1f3330; --warn:#b25138;
+    --shadow:0 1px 3px rgba(40,38,34,.05), 0 6px 20px rgba(40,38,34,.06);
+    --shadow-lift:0 4px 16px rgba(40,38,34,.10), 0 12px 40px rgba(40,38,34,.12);
+    --sans:'Hanken Grotesk',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+    --serif:'Newsreader','Songti SC','PingFang SC',serif;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:var(--sans);background:var(--paper);color:var(--ink);
+    font-size:16px;line-height:1.6;overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{display:flex;flex-direction:column;height:100dvh;}
+
+  .view{flex:1;overflow-y:auto;display:none;-webkit-overflow-scrolling:touch;}
+  .view.active{display:flex;flex-direction:column;}
+
+  /* 顶栏：与背景融为一体，无深色块、无边框线 */
+  #chatBar{flex-shrink:0;display:flex;align-items:center;gap:6px;
+    padding:calc(env(safe-area-inset-top) + 8px) 10px 8px;
+    background:var(--paper);border:none;box-shadow:none;}
+  .bar-spacer{flex:1;}
+  /* 纯图标按钮：无边框无底色 */
+  .icon-btn{flex-shrink:0;width:38px;height:38px;border-radius:11px;
+    border:none;background:transparent;color:var(--ink);
+    font-size:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:background .18s var(--ease),transform .12s var(--ease);}
+  .icon-btn:active{background:var(--line);transform:scale(.92);}
+  #modelBtn{flex-shrink:1;min-width:0;display:flex;align-items:center;gap:5px;
+    background:var(--card);border:none;box-shadow:var(--shadow);border-radius:11px;
+    padding:0 13px;height:38px;font-family:var(--sans);font-size:13px;
+    color:var(--ink);cursor:pointer;
+    transition:transform .12s var(--ease);}
+  #modelBtn:active{transform:scale(.97);}
+  #modelLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+  #modelBtn.unset #modelLabel{color:var(--warn);}
+  #modelBtn .caret{color:var(--muted);font-size:10px;flex-shrink:0;}
+  .bar-btn{flex-shrink:0;border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:11px;height:38px;padding:0 15px;font-family:var(--sans);
+    font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;
+    transition:transform .12s var(--ease);}
+  .bar-btn:active{transform:scale(.97);}
+
+  #chatScroll{flex:1;overflow-y:auto;padding:14px 16px 8px;
+    background:var(--paper);overscroll-behavior:none;}
+  .msg{margin-bottom:18px;display:flex;flex-direction:column;
+    animation:rise .34s var(--ease);}
+  @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .msg .who{font-size:10.5px;color:var(--muted);margin-bottom:5px;
+    letter-spacing:.6px;text-transform:uppercase;}
+  .msg.user .who{align-self:flex-end;}
+  .bubble{padding:13px 16px;border-radius:18px;font-size:15.5px;line-height:1.68;
+    white-space:pre-wrap;word-break:break-word;}
+  .msg.user{align-items:flex-end;}
+  .msg.user .bubble{background:var(--user-bg);color:var(--user-ink);
+    border-bottom-right-radius:6px;max-width:86%;}
+  .msg.bot .bubble{background:var(--card);box-shadow:var(--shadow);
+    border-bottom-left-radius:6px;}
+  .msg.bot .bubble.err{background:#f8ece7;color:var(--warn);box-shadow:none;}
+  .src{margin-top:8px;font-size:11.5px;color:var(--muted);
+    display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .src .tag{background:var(--accent-soft);color:var(--accent);
+    padding:3px 9px;border-radius:7px;font-size:11px;font-weight:600;}
+
+  /* 消息底部操作栏：复制 / 编辑 */
+  .msg-acts{display:flex;gap:14px;margin-top:6px;opacity:.7;}
+  .msg.user .msg-acts{align-self:flex-end;}
+  .msg-acts button{background:none;border:none;font-family:var(--sans);
+    font-size:12px;color:var(--muted);cursor:pointer;padding:2px 0;font-weight:600;}
+  .msg-acts button:active{color:var(--accent);}
+  /* 消息里的图片 */
+  .msg-imgs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+  .msg.user .msg-imgs{justify-content:flex-end;}
+  .msg-imgs img{width:120px;height:120px;object-fit:cover;border-radius:12px;
+    box-shadow:var(--shadow);}
+  /* 编辑态 */
+  .edit-area{width:100%;border:none;background:var(--card);
+    box-shadow:var(--shadow),0 0 0 2px var(--accent-soft);
+    border-radius:14px;padding:12px 14px;font-family:var(--sans);
+    font-size:15.5px;line-height:1.65;color:var(--ink);resize:vertical;
+    min-height:200px;max-height:60dvh;}
+  .edit-acts{display:flex;gap:9px;margin-top:7px;}
+  .msg.user .edit-acts{justify-content:flex-end;}
+  .edit-acts button{border:none;border-radius:10px;padding:7px 14px;
+    font-family:var(--sans);font-size:12.5px;font-weight:600;cursor:pointer;}
+  .edit-acts .e-ok{background:var(--accent);color:#fff;}
+  .edit-acts .e-cancel{background:var(--card);box-shadow:var(--shadow);color:var(--muted);}
+
+  .empty-hint{text-align:center;color:var(--muted);font-family:var(--serif);
+    font-style:italic;font-size:16px;margin:auto;padding:40px 30px;line-height:1.7;}
+  .typing{display:flex;gap:4px;padding:4px 2px;}
+  .typing span{width:7px;height:7px;border-radius:50%;background:var(--muted);
+    animation:bounce 1.2s infinite ease-in-out;}
+  .typing span:nth-child(2){animation-delay:.15s;}
+  .typing span:nth-child(3){animation-delay:.3s;}
+  @keyframes bounce{0%,80%,100%{opacity:.25;transform:translateY(0);}40%{opacity:1;transform:translateY(-4px);}}
+
+  /* 待发送图片预览条 */
+  #pendingImgs{display:none;gap:8px;padding:8px 14px 0;flex-wrap:wrap;}
+  #pendingImgs.show{display:flex;}
+  .pend-img{position:relative;width:62px;height:62px;}
+  .pend-img img{width:100%;height:100%;object-fit:cover;border-radius:10px;
+    box-shadow:var(--shadow);}
+  .pend-img .rm{position:absolute;top:-6px;right:-6px;width:20px;height:20px;
+    border-radius:50%;background:var(--warn);color:#fff;border:none;
+    font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  /* 输入栏的 PDF 按钮 */
+  .pdf-btn{position:relative;}
+  .pdf-btn .pdf-ico{font-size:10px;font-weight:700;}
+  .pdf-btn .pdf-num{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;
+    border-radius:8px;background:var(--warn);color:#fff;font-size:10px;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;}
+  /* PDF 列表项 */
+  .pdf-row{display:flex;align-items:center;gap:10px;background:var(--card);
+    box-shadow:var(--shadow);border-radius:11px;padding:11px 13px;margin-bottom:8px;}
+  .pdf-row .pr-icon{flex-shrink:0;width:32px;height:38px;border-radius:5px;
+    background:var(--accent);color:#fff;font-size:9.5px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;}
+  .pdf-row .pr-info{flex:1;min-width:0;}
+  .pdf-row .pr-name{font-size:13.5px;color:var(--ink);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;}
+  .pdf-row .pr-state{font-size:11px;margin-top:2px;color:var(--accent);}
+  .pdf-row .pr-state.warn{color:var(--warn);}
+  .pdf-row .pr-del{flex-shrink:0;background:none;border:none;color:var(--warn);
+    font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);padding:5px;}
+  .pdf-empty{text-align:center;color:var(--muted);font-family:var(--serif);
+    font-style:italic;font-size:14px;padding:24px 12px;}
+
+  #inputBar{flex-shrink:0;background:var(--paper);
+    padding:8px 12px calc(env(safe-area-inset-bottom) + 10px);
+    display:flex;gap:9px;align-items:flex-end;}
+  .attach-btn{flex-shrink:0;width:46px;height:46px;border-radius:15px;border:none;
+    background:var(--card);box-shadow:var(--shadow);color:var(--accent);
+    font-size:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:transform .12s var(--ease);}
+  .attach-btn:active{transform:scale(.9);}
+  #qInput{flex:1;border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:16px;padding:12px 15px;font-family:var(--sans);font-size:15.5px;
+    resize:none;max-height:120px;line-height:1.5;color:var(--ink);
+    transition:box-shadow .2s var(--ease);}
+  #qInput:focus{outline:none;box-shadow:var(--shadow),0 0 0 2px var(--accent-soft);}
+  .send-btn{flex-shrink:0;width:46px;height:46px;border-radius:15px;border:none;
+    background:var(--accent);color:#fff;font-size:20px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .12s var(--ease),opacity .2s var(--ease),background .2s var(--ease);}
+  .send-btn:active{transform:scale(.9);}
+  .send-btn:disabled{opacity:.4;}
+  .send-btn.stop{background:var(--warn);}
+
+
+  .kb-wrap{padding:calc(env(safe-area-inset-top) + 18px) 16px 90px;}
+  .kb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .kb-top .count{font-size:13px;color:var(--muted);}
+  .add-btn{border:none;background:var(--accent);color:#fff;border-radius:12px;
+    padding:9px 15px;font-family:var(--sans);font-size:13.5px;font-weight:600;cursor:pointer;
+    transition:transform .12s var(--ease);}
+  .add-btn:active{transform:scale(.96);}
+  .kb-item{background:var(--card);box-shadow:var(--shadow);border-radius:15px;
+    padding:14px 16px;margin-bottom:11px;animation:rise .3s var(--ease);}
+  .kb-item h3{font-family:var(--serif);font-weight:500;font-size:16.5px;margin-bottom:3px;}
+  .kb-item p{font-size:13.5px;color:var(--muted);line-height:1.55;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .kb-item .acts{display:flex;gap:16px;margin-top:10px;}
+  .kb-item .acts button{background:none;border:none;font-family:var(--sans);font-size:12.5px;
+    color:var(--accent);cursor:pointer;padding:0;font-weight:600;}
+  .kb-item .acts button.del{color:var(--warn);}
+  /* 知识库搜索框 */
+  .kb-search{width:100%;border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:12px;padding:11px 14px;font-family:var(--sans);font-size:14.5px;
+    color:var(--ink);margin-bottom:10px;}
+  .kb-search:focus{outline:none;box-shadow:var(--shadow),0 0 0 2px var(--accent-soft);}
+  /* 标签筛选区 */
+  .kb-filter-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+  .kb-filter-tags:empty{margin-bottom:0;}
+  /* 标签通用样式（筛选区、选择区、条目上） */
+  .tag-chip{border:none;border-radius:8px;padding:5px 10px;font-family:var(--sans);
+    font-size:11.5px;cursor:pointer;background:var(--card);box-shadow:var(--shadow);
+    color:var(--muted);transition:transform .12s var(--ease);}
+  .tag-chip:active{transform:scale(.95);}
+  .tag-chip.on{background:var(--accent);color:#fff;}
+  .tag-chip .tg-group{opacity:.6;font-size:10px;margin-right:3px;}
+  /* 条目上的标签（只读小标签） */
+  .kb-item .kb-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;}
+  .kb-item .kb-tags span{background:var(--accent-soft);color:var(--accent);
+    padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;}
+  /* 编辑弹窗里的标签选择 */
+  .kb-tag-pick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .kb-tag-pick:empty::before{content:"还没有标签，先在下方添加";
+    color:var(--muted);font-size:12px;font-style:italic;}
+  .kb-tag-add{display:flex;gap:7px;align-items:stretch;width:100%;}
+  .kb-tag-add select{flex:0 0 76px;width:76px;min-width:0;border:none;
+    background:var(--card);box-shadow:var(--shadow);border-radius:11px;
+    padding:11px 4px;font-family:var(--sans);font-size:13.5px;color:var(--ink);}
+  .kb-tag-add input{flex:1 1 auto;min-width:0;border:none;background:var(--card);
+    box-shadow:var(--shadow);border-radius:11px;padding:11px 13px;
+    font-family:var(--sans);font-size:14.5px;color:var(--ink);}
+  .kb-tag-add input:focus{outline:none;box-shadow:var(--shadow),0 0 0 2px var(--accent-soft);}
+  .kb-tag-add button{flex:0 0 auto;border:none;background:var(--accent);color:#fff;
+    border-radius:11px;padding:0 15px;font-family:var(--sans);font-size:14px;
+    font-weight:600;cursor:pointer;white-space:nowrap;}
+
+  .set-wrap{padding:calc(env(safe-area-inset-top) + 20px) 18px 90px;}
+  .field{margin-bottom:20px;}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}
+  .field .desc{font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
+  .field input,.field select,.field textarea{
+    width:100%;border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:12px;padding:12px 14px;font-family:var(--sans);font-size:15px;
+    color:var(--ink);transition:box-shadow .2s var(--ease);}
+  .field input:focus,.field select:focus,.field textarea:focus{
+    outline:none;box-shadow:var(--shadow),0 0 0 2px var(--accent-soft);}
+  .prov-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .prov-grid button{
+    flex:1 1 28%;border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:12px;padding:11px 4px;font-family:var(--sans);font-size:13px;
+    cursor:pointer;color:var(--muted);transition:transform .12s var(--ease);}
+  .prov-grid button:active{transform:scale(.95);}
+  .prov-grid button.on{background:var(--accent);color:#fff;font-weight:600;}
+  .model-row{display:flex;gap:8px;}
+  .model-row input{flex:1;}
+  .refresh-btn{flex-shrink:0;border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:12px;padding:0 15px;font-family:var(--sans);font-size:13px;
+    color:var(--accent);font-weight:600;cursor:pointer;white-space:nowrap;}
+  .refresh-btn:disabled{color:var(--muted);opacity:.6;}
+  .model-hint{font-size:11.5px;color:var(--muted);margin-top:7px;min-height:15px;}
+  /* 模型名选择框（点击弹窗，不弹键盘） */
+  .model-name-box{flex:1;min-width:0;display:flex;align-items:center;gap:6px;
+    border:none;background:var(--card);box-shadow:var(--shadow);border-radius:12px;
+    padding:12px 14px;font-family:var(--sans);font-size:15px;color:var(--ink);
+    cursor:pointer;text-align:left;}
+  .model-name-box #modelNameText{flex:1;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;}
+  .model-name-box .caret{color:var(--muted);font-size:11px;flex-shrink:0;}
+  /* 密钥框 + 眼睛按钮 */
+  .key-row{display:flex;gap:8px;align-items:stretch;}
+  .key-row input{flex:1;}
+  .eye-btn{flex-shrink:0;border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:12px;width:48px;font-size:18px;cursor:pointer;color:var(--muted);
+    transition:transform .12s var(--ease);}
+  .eye-btn:active{transform:scale(.92);}
+  .eye-btn.on{color:var(--accent);}
+  /* 模型名选择列表项 */
+  .mn-item{display:flex;align-items:center;background:var(--card);box-shadow:var(--shadow);
+    border-radius:12px;padding:13px 15px;margin-bottom:8px;cursor:pointer;
+    font-size:14.5px;transition:transform .12s var(--ease);animation:rise .24s var(--ease);}
+  .mn-item:active{transform:scale(.98);}
+  .mn-item.on{box-shadow:var(--shadow),0 0 0 2px var(--accent);font-weight:600;}
+  .mn-item .mn-tick{margin-left:auto;color:var(--accent);font-weight:700;}
+  .mn-empty{text-align:center;color:var(--muted);font-family:var(--serif);
+    font-style:italic;font-size:14px;padding:24px 12px;}
+  .save-btn{width:100%;border:none;background:var(--accent);color:#fff;border-radius:14px;
+    padding:14px;font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;
+    transition:transform .12s var(--ease);}
+  .save-btn:active{transform:scale(.98);}
+  .saved-flash{text-align:center;color:var(--accent);font-size:13px;margin-top:10px;height:16px;}
+
+  nav{flex-shrink:0;display:flex;background:var(--paper);
+    padding:4px 0 env(safe-area-inset-bottom);}
+  nav button{flex:1;background:none;border:none;padding:9px 0 8px;cursor:pointer;
+    font-family:var(--sans);font-size:11px;color:var(--muted);
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    transition:color .18s var(--ease);}
+  nav button .ico{font-size:19px;line-height:1;transition:transform .18s var(--ease);}
+  nav button.on{color:var(--accent);font-weight:600;}
+  nav button.on .ico{transform:translateY(-1px) scale(1.08);}
+
+  /* 弹窗：底部滑入 */
+  .modal-bg{position:fixed;inset:0;background:rgba(35,33,30,.42);z-index:50;
+    display:none;align-items:flex-end;opacity:0;transition:opacity .22s var(--ease);}
+  .modal-bg.show{display:flex;opacity:1;}
+  .modal{background:var(--paper);width:100%;box-sizing:border-box;
+    border-radius:24px 24px 0 0;
+    padding:22px 18px calc(env(safe-area-inset-bottom) + 20px);
+    max-height:88dvh;overflow-y:auto;overflow-x:hidden;
+    transform:translateY(100%);
+    transition:transform .38s cubic-bezier(.16,.84,.36,1);}
+  .modal *{max-width:100%;box-sizing:border-box;}
+  .modal-bg.show .modal{transform:translateY(0);}
+  /* 高层级底部弹窗：从抽屉中弹出的底部菜单用，z-index 高于抽屉(61) */
+  .modal-bg.top-sheet{z-index:80;}
+  /* 居中弹窗：含输入框的弹窗用，键盘弹起也不会被顶出屏幕
+     z-index 高于抽屉(61)，确保从抽屉中弹出时不被抽屉盖住
+     动画用淡入+轻微上浮，比缩放柔和 */
+  .modal-bg.centered{align-items:center;justify-content:center;padding:20px;z-index:80;
+    transition:opacity .13s ease;}
+  .modal-bg.centered .modal{width:100%;max-width:380px;border-radius:20px;
+    padding:22px 20px;transform:translateY(8px);opacity:0;
+    transition:transform .14s ease, opacity .14s ease;}
+  .modal-bg.centered.show .modal{transform:translateY(0);opacity:1;}
+  .modal h2{font-family:var(--serif);font-weight:500;font-size:20px;margin-bottom:16px;}
+  .modal textarea{min-height:140px;resize:vertical;line-height:1.6;}
+  .modal-acts{display:flex;gap:10px;margin-top:8px;}
+  .modal-acts button{flex:1;border-radius:13px;padding:13px;font-family:var(--sans);
+    font-size:14.5px;font-weight:600;cursor:pointer;border:none;
+    transition:transform .12s var(--ease);}
+  .modal-acts button:active{transform:scale(.97);}
+  .btn-cancel{background:var(--card);box-shadow:var(--shadow);color:var(--muted);}
+  .btn-ok{background:var(--accent);color:#fff;}
+
+  /* 左侧抽屉：对话列表 */
+  .drawer-bg{position:fixed;inset:0;background:rgba(35,33,30,.42);z-index:60;
+    display:none;opacity:0;transition:opacity .25s var(--ease);}
+  .drawer-bg.show{display:block;opacity:1;}
+  .drawer{position:fixed;top:0;left:0;bottom:0;width:76%;max-width:300px;
+    background:var(--paper);z-index:61;display:flex;flex-direction:column;
+    transform:translateX(-100%);transition:transform .32s var(--ease);
+    box-shadow:var(--shadow-lift);}
+  .drawer.show{transform:translateX(0);}
+  .drawer-head{padding:calc(env(safe-area-inset-top) + 18px) 16px 10px;}
+  .drawer-head h2{font-family:var(--serif);font-weight:500;font-size:20px;margin-bottom:12px;}
+  .drawer-search{width:100%;border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:12px;padding:11px 13px;font-family:var(--sans);font-size:14px;color:var(--ink);}
+  .drawer-search:focus{outline:none;box-shadow:var(--shadow),0 0 0 2px var(--accent-soft);}
+  .drawer-list{flex:1;overflow-y:auto;padding:6px 12px 12px;}
+
+  .convo-item{position:relative;display:flex;align-items:center;gap:4px;
+    background:var(--card);box-shadow:var(--shadow);border-radius:10px;
+    padding:8px 10px;margin-bottom:5px;animation:rise .26s var(--ease);}
+  .convo-item.on{box-shadow:var(--shadow),0 0 0 2px var(--accent);}
+  .convo-item .ci-main{flex:1;min-width:0;cursor:pointer;padding-right:24px;}
+  .convo-item .ci-title{font-size:13.5px;font-weight:600;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .convo-item .ci-meta{font-size:10.5px;color:var(--muted);margin-top:1px;}
+  /* 删除图标：右下角 */
+  .convo-item .ci-act{position:absolute;right:6px;bottom:5px;
+    background:none;border:none;font-size:11px;cursor:pointer;padding:4px;
+    color:var(--muted);border-radius:7px;opacity:.6;
+    transition:background .15s var(--ease);}
+  .convo-item .ci-act:active{background:var(--line);}
+  .ci-empty{text-align:center;color:var(--muted);font-family:var(--serif);
+    font-style:italic;font-size:14px;padding:30px 16px;}
+
+  /* 回复倾向预设 */
+  .preset-row{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 14px;}
+  .preset-row button{border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:10px;padding:8px 11px;font-family:var(--sans);font-size:12px;
+    color:var(--accent);cursor:pointer;transition:transform .12s var(--ease);}
+  .preset-row button:active{transform:scale(.95);}
+
+  /* 模型选择 */
+  .model-pick{display:flex;align-items:center;gap:10px;background:var(--card);
+    box-shadow:var(--shadow);border-radius:13px;padding:14px 15px;
+    margin-bottom:9px;cursor:pointer;transition:transform .12s var(--ease);
+    animation:rise .26s var(--ease);}
+  .model-pick:active{transform:scale(.98);}
+  .model-pick.on{box-shadow:var(--shadow),0 0 0 2px var(--accent);}
+  .model-pick .mp-main{flex:1;min-width:0;}
+  .model-pick .mp-name{font-size:14.5px;font-weight:600;}
+  .model-pick .mp-meta{font-size:11.5px;color:var(--muted);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .model-pick .mp-state{flex-shrink:0;font-size:11.5px;font-weight:600;}
+  .model-pick .mp-state.ready{color:var(--accent);}
+  .model-pick .mp-state.empty{color:var(--warn);}
+
+  /* 长按菜单 */
+  .menu-list{display:flex;flex-direction:column;gap:6px;margin-bottom:6px;}
+  .menu-item{display:flex;align-items:center;gap:11px;background:var(--card);
+    box-shadow:var(--shadow);border:none;border-radius:12px;padding:13px 15px;
+    font-family:var(--sans);font-size:14.5px;color:var(--ink);cursor:pointer;
+    text-align:left;transition:transform .12s var(--ease);}
+  .menu-item:active{transform:scale(.98);}
+  .menu-item.danger{color:var(--warn);}
+  .menu-item .mi-ico{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+
+  /* 侧栏对话条：置顶绿点 + 收藏星标 */
+  .convo-item .ci-star{flex-shrink:0;color:#d9a441;font-size:13px;}
+  .convo-item .ci-pin{flex-shrink:0;width:7px;height:7px;border-radius:50%;
+    background:var(--accent);margin-right:4px;}
+  .menu-item .mi-dot{width:9px;height:9px;border-radius:50%;
+    background:var(--accent);flex-shrink:0;margin:0 5px 0 6px;}
+  .menu-item .mi-star{color:#d9a441;}
+
+  /* 收藏夹 */
+  .fav-tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .fav-tab{flex:1;border:none;background:var(--card);box-shadow:var(--shadow);
+    border-radius:11px;padding:10px;font-family:var(--sans);font-size:13px;
+    color:var(--muted);font-weight:600;cursor:pointer;}
+  .fav-tab.on{background:var(--accent);color:#fff;}
+  .fav-entry{background:var(--card);box-shadow:var(--shadow);border-radius:12px;
+    padding:12px 14px;margin-bottom:9px;cursor:pointer;animation:rise .24s var(--ease);}
+  .fav-entry .fe-title{font-size:14px;font-weight:600;margin-bottom:3px;}
+  .fav-entry .fe-text{font-size:13px;color:var(--muted);line-height:1.5;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .fav-entry .fe-meta{font-size:11px;color:var(--muted);margin-top:5px;
+    display:flex;justify-content:space-between;}
+  .fav-entry .fe-meta button{background:none;border:none;color:var(--warn);
+    font-family:var(--sans);font-size:11.5px;cursor:pointer;font-weight:600;}
+  .fav-empty{text-align:center;color:var(--muted);font-family:var(--serif);
+    font-style:italic;font-size:14px;padding:30px 12px;}
+
+  /* 多版本回复切换条 */
+  .ver-bar{display:flex;align-items:center;gap:8px;margin-top:6px;
+    font-size:12px;color:var(--muted);}
+  .ver-bar button{background:var(--card);box-shadow:var(--shadow);border:none;
+    width:24px;height:24px;border-radius:7px;cursor:pointer;color:var(--accent);
+    font-size:13px;display:flex;align-items:center;justify-content:center;}
+  .ver-bar button:disabled{opacity:.35;}
+  .ver-bar .ver-num{min-width:42px;text-align:center;}
+  /* 翻译块 */
+  .trans-block{margin-top:8px;padding:11px 13px;background:var(--accent-soft);
+    border-radius:12px;font-size:14.5px;line-height:1.6;color:var(--ink);
+    white-space:pre-wrap;word-break:break-word;animation:rise .24s var(--ease);}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section class="view active" id="view-chat">
+    <div id="chatBar">
+      <button class="icon-btn" id="convoListBtn" aria-label="对话列表">☰</button>
+      <button id="modelBtn"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
+      <div class="bar-spacer"></div>
+      <button class="icon-btn" id="favBtn" aria-label="收藏夹">♥</button>
+      <button class="bar-btn" id="personaBtn">倾向</button>
+      <button class="icon-btn" id="newChatBtn" aria-label="新对话">＋</button>
+    </div>
+    <div id="chatScroll"></div>
+    <div id="pendingImgs"></div>
+    <div id="convoPdfBar"></div>
+    <div id="inputBar">
+      <input type="file" id="fileInput" accept="image/*,application/pdf" multiple style="display:none;">
+      <button class="attach-btn" id="attachBtn" aria-label="添加图片或PDF">📎</button>
+      <button class="attach-btn pdf-btn" id="pdfBtn" style="display:none;" aria-label="本对话的PDF">
+        <span class="pdf-ico">PDF</span><span class="pdf-num" id="pdfBtnCount">0</span></button>
+      <textarea id="qInput" rows="1" placeholder="提一个问题…"></textarea>
+      <button class="send-btn" id="sendBtn">↑</button>
+    </div>
+  </section>
+
+  <section class="view" id="view-kb">
+    <div class="kb-wrap">
+      <div class="kb-top">
+        <span class="count" id="kbCount">共 0 条</span>
+        <button class="add-btn" id="addKbBtn">＋ 新增条目</button>
+      </div>
+      <input type="text" id="kbSearch" class="kb-search" placeholder="搜索标题、内容或标签…">
+      <div id="kbFilterTags" class="kb-filter-tags"></div>
+      <div id="kbList"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-set">
+    <div class="set-wrap">
+      <div class="field">
+        <label>模型提供方</label>
+        <div class="desc">每个提供方的密钥会分开记住，切换时不会丢。</div>
+        <div class="prov-grid" id="provGrid"></div>
+      </div>
+      <div class="field" id="baseField" style="display:none;">
+        <label>接口地址（Base URL）</label>
+        <div class="desc">填写兼容 OpenAI 格式的接口根地址，通常以 /v1 结尾。</div>
+        <input type="text" id="baseUrl" placeholder="https://...">
+      </div>
+      <div class="field">
+        <label>API 密钥</label>
+        <div class="desc">密钥只保存在本机，不会上传到任何地方。</div>
+        <div class="key-row">
+          <input type="password" id="apiKey" placeholder="粘贴你的 API Key">
+          <button type="button" class="eye-btn" id="keyToggle" aria-label="显示或隐藏密钥">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>模型名称</label>
+        <div class="desc">点「获取列表」拉取该平台模型后，点下方选择；也可手动输入。</div>
+        <div class="model-row">
+          <button type="button" id="modelNameBox" class="model-name-box">
+            <span id="modelNameText">默认</span><span class="caret">▾</span>
+          </button>
+          <button class="refresh-btn" id="fetchModelsBtn">获取列表</button>
+        </div>
+        <input type="hidden" id="modelName">
+        <div class="model-hint" id="modelHint"></div>
+      </div>
+      <div class="field">
+        <label>默认回复倾向</label>
+        <div class="desc">新建对话时默认采用的回答偏好。每个对话仍可在「倾向」里单独修改。</div>
+        <textarea id="defaultPersona" rows="3" placeholder="例如：回答简明扼要，先给结论；必要时列出鉴别诊断。"></textarea>
+      </div>
+      <div class="field">
+        <label>应用名称</label>
+        <div class="desc">显示在桌面图标和应用内的名字。不限于神经内科，可按你的用途修改。</div>
+        <input type="text" id="appName" placeholder="神经内科知识库" maxlength="20">
+      </div>
+      <div class="field">
+        <label>对话中的称呼</label>
+        <div class="desc">聊天气泡上方显示的名字，可自定义。</div>
+        <div class="model-row">
+          <input type="text" id="userName" placeholder="我" maxlength="10">
+          <input type="text" id="botName" placeholder="助手" maxlength="10">
+        </div>
+      </div>
+      <button class="save-btn" id="saveSetBtn">保存设置</button>
+      <div class="saved-flash" id="savedFlash"></div>
+
+      <div class="field" style="margin-top:14px;">
+        <label>数据备份</label>
+        <div class="desc">所有对话、知识库、设置只存在本机。换手机或清理浏览器前，先导出备份；之后导入即可恢复。</div>
+        <div class="model-row">
+          <button class="refresh-btn" id="exportBtn" style="flex:1;">导出备份</button>
+          <button class="refresh-btn" id="importBtn" style="flex:1;">导入备份</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json,.json" style="display:none;">
+        <div class="model-hint" id="backupHint"></div>
+      </div>
+    </div>
+  </section>
+
+  <nav>
+    <button class="on" data-v="chat"><span class="ico">✦</span>查询</button>
+    <button data-v="kb"><span class="ico">❑</span>知识库</button>
+    <button data-v="set"><span class="ico">⚙</span>设置</button>
+  </nav>
+</div>
+
+<!-- 知识库条目编辑 -->
+<div class="modal-bg" id="kbModal">
+  <div class="modal">
+    <h2 id="kbModalTitle">新增条目</h2>
+    <div class="field">
+      <label>标题</label>
+      <input type="text" id="kbTitle" placeholder="如：急性缺血性卒中 — 溶栓时间窗">
+    </div>
+    <div class="field">
+      <label>内容</label>
+      <textarea id="kbContent" placeholder="录入这条知识的正文…"></textarea>
+    </div>
+    <div class="field">
+      <label>标签</label>
+      <div class="desc">点已有标签可选中或取消；删除标签用长按。在下方可添加新标签。</div>
+      <div id="kbTagPick" class="kb-tag-pick"></div>
+      <div class="kb-tag-add">
+        <select id="kbNewTagGroup">
+          <option value="中医">中医</option>
+          <option value="西医">西医</option>
+          <option value="症状">症状</option>
+          <option value="疾病">疾病</option>
+          <option value="人物">人物</option>
+          <option value="机制">机制</option>
+          <option value="其他">其他</option>
+        </select>
+        <input type="text" id="kbNewTag" placeholder="输入新标签名">
+        <button type="button" id="kbAddTagBtn">添加</button>
+      </div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" id="kbCancel">取消</button>
+      <button class="btn-ok" id="kbSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 对话列表：左侧抽屉 -->
+<div class="drawer-bg" id="drawerBg"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h2>对话</h2>
+    <input type="text" class="drawer-search" id="convoSearch" placeholder="搜索对话…">
+  </div>
+  <div class="drawer-list" id="convoList"></div>
+</div>
+
+<!-- 回复倾向 -->
+<div class="modal-bg" id="personaModal">
+  <div class="modal">
+    <h2>这个对话的回复倾向</h2>
+    <div class="field">
+      <div class="desc">写下希望 AI 在这个对话里遵循的回答偏好。只影响当前对话。</div>
+      <textarea id="personaText" placeholder="例如：回答尽量简短；多列鉴别诊断；优先引用最新指南。"></textarea>
+    </div>
+    <div class="preset-row" id="personaPresets"></div>
+    <div class="modal-acts">
+      <button class="btn-cancel" id="personaCancel">取消</button>
+      <button class="btn-ok" id="personaSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 模型选择（当前对话） -->
+<div class="modal-bg" id="modelModal">
+  <div class="modal">
+    <h2>这个对话使用的模型</h2>
+    <div class="desc" style="margin-bottom:12px;">
+      切换只影响当前对话，历史上下文会保留。灰色的需要先到「设置」里填密钥。</div>
+    <div id="modelPickList"></div>
+  </div>
+</div>
+
+<!-- 重命名对话 -->
+<div class="modal-bg centered" id="renameModal">
+  <div class="modal">
+    <h2>重命名对话</h2>
+    <div class="field">
+      <input type="text" id="renameInput" placeholder="输入对话名称" maxlength="40">
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" id="renameCancel">取消</button>
+      <button class="btn-ok" id="renameSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 模型名称选择（设置页用） -->
+<div class="modal-bg" id="modelNameModal">
+  <div class="modal">
+    <h2>选择模型</h2>
+    <div class="desc" style="margin-bottom:10px;">从已获取的列表中选择，或手动输入模型名。</div>
+    <div id="modelNameList"></div>
+    <div class="modal-acts" style="margin-top:12px;">
+      <button class="btn-cancel" id="modelNameManual">手动输入</button>
+      <button class="btn-cancel" id="modelNameClose">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 对话长按菜单 -->
+<div class="modal-bg centered" id="convoMenuModal">
+  <div class="modal">
+    <h2 id="convoMenuTitle">对话操作</h2>
+    <div class="menu-list">
+      <button class="menu-item" id="cmPin"><span class="mi-dot"></span><span id="cmPinText">置顶</span></button>
+      <button class="menu-item" id="cmRename"><span class="mi-ico">✎</span>重命名</button>
+      <button class="menu-item" id="cmFav"><span class="mi-ico mi-star">★</span><span id="cmFavText">收藏此对话</span></button>
+    </div>
+    <div class="modal-acts" style="margin-top:8px;">
+      <button class="btn-cancel" id="convoMenuClose">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 收藏夹 -->
+<div class="modal-bg" id="favModal">
+  <div class="modal">
+    <h2>收藏夹</h2>
+    <div class="fav-tabs">
+      <button class="fav-tab on" data-ft="convo">收藏的对话</button>
+      <button class="fav-tab" data-ft="msg">收藏的回复</button>
+    </div>
+    <div id="favList"></div>
+    <div class="modal-acts" style="margin-top:10px;">
+      <button class="btn-cancel" id="favClose">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 本对话的 PDF 列表 -->
+<div class="modal-bg" id="pdfListModal">
+  <div class="modal">
+    <h2>本对话的 PDF</h2>
+    <div class="desc" style="margin-bottom:10px;">这些 PDF 会在每次提问时一并发给模型作参考。不需要的可以删掉。</div>
+    <div id="pdfListBox"></div>
+    <div class="modal-acts" style="margin-top:10px;">
+      <button class="btn-cancel" id="pdfListClose">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- 模型提供方配置 ----------
+   vision: 该提供方默认模型是否支持识别图片（多模态） */
+const PROVIDERS = {
+  claude:   { label:"Claude",   type:"anthropic", vision:true,  base:"https://api.anthropic.com",                       model:"claude-sonnet-4-6" },
+  openai:   { label:"GPT",      type:"openai",    vision:true,  base:"https://api.openai.com/v1",                        model:"gpt-4o" },
+  gemini:   { label:"Gemini",   type:"gemini",    vision:true,  base:"https://generativelanguage.googleapis.com/v1beta", model:"gemini-2.0-flash" },
+  deepseek: { label:"DeepSeek", type:"openai",    vision:false, base:"https://api.deepseek.com/v1",                      model:"deepseek-chat" },
+  qwen:     { label:"通义千问", type:"openai",    vision:false, base:"https://dashscope.aliyuncs.com/compatible-mode/v1", model:"qwen-plus" },
+  grok:     { label:"Grok",     type:"openai",    vision:true,  base:"https://api.x.ai/v1",                              model:"grok-4" },
+  custom:   { label:"自定义",   type:"openai",    vision:true,  base:"",                                                 model:"" }
+};
+const PROV_KEYS = Object.keys(PROVIDERS);
+
+/* 回复倾向预设 */
+const PERSONA_PRESETS = [
+  "回答简明扼要，先给结论，少铺垫。",
+  "尽量详细，展开机制与背景。",
+  "突出鉴别诊断，列出需要排除的情况。",
+  "优先参考最新临床指南，并注明指南名称与年份。"
+];
+
+/* ---------- 存储层：优先环境持久化，回退 localStorage ---------- */
+const Store = {
+  async get(k){
+    try{ if(window.storage){ const r=await window.storage.get(k); return r?r.value:null; } }catch(e){}
+    try{ return localStorage.getItem(k); }catch(e){ return null; }
+  },
+  async set(k,v){
+    try{ if(window.storage){ await window.storage.set(k,v,false); return; } }catch(e){}
+    try{ localStorage.setItem(k,v); }catch(e){}
+  }
+};
+
+/* ---------- 知识库存储：IndexedDB，可扛上千条 ----------
+   两个对象仓库：entries（知识条目）、tags（标签）
+   IndexedDB 不可用时回退 localStorage */
+const KBStore = {
+  _db: null,
+  _ready: null,
+  open(){
+    if(this._ready) return this._ready;
+    this._ready = new Promise((resolve)=>{
+      if(!window.indexedDB){ resolve(null); return; }
+      let req;
+      try{ req = indexedDB.open("neuro_kb", 1); }
+      catch(e){ resolve(null); return; }
+      req.onupgradeneeded = (e)=>{
+        const db = e.target.result;
+        if(!db.objectStoreNames.contains("entries"))
+          db.createObjectStore("entries", {keyPath:"id"});
+        if(!db.objectStoreNames.contains("tags"))
+          db.createObjectStore("tags", {keyPath:"id"});
+      };
+      req.onsuccess = (e)=>{ this._db = e.target.result; resolve(this._db); };
+      req.onerror = ()=>resolve(null);
+    });
+    return this._ready;
+  },
+  async _all(storeName){
+    const db = await this.open();
+    if(!db){
+      // 回退：localStorage
+      try{ return JSON.parse(localStorage.getItem("nkb_"+storeName)||"[]"); }
+      catch(e){ return []; }
+    }
+    return new Promise((resolve)=>{
+      try{
+        const tx = db.transaction(storeName,"readonly");
+        const req = tx.objectStore(storeName).getAll();
+        req.onsuccess = ()=>resolve(req.result||[]);
+        req.onerror = ()=>resolve([]);
+      }catch(e){ resolve([]); }
+    });
+  },
+  async _put(storeName, items){
+    const db = await this.open();
+    if(!db){
+      try{ localStorage.setItem("nkb_"+storeName, JSON.stringify(items)); }catch(e){}
+      return;
+    }
+    return new Promise((resolve)=>{
+      try{
+        const tx = db.transaction(storeName,"readwrite");
+        const st = tx.objectStore(storeName);
+        st.clear();
+        items.forEach(it=>st.put(it));
+        tx.oncomplete = ()=>resolve();
+        tx.onerror = ()=>resolve();
+      }catch(e){ resolve(); }
+    });
+  },
+  getEntries(){ return this._all("entries"); },
+  getTags(){ return this._all("tags"); },
+  saveEntries(items){ return this._put("entries", items); },
+  saveTags(items){ return this._put("tags", items); }
+};
+
+/* ---------- 状态 ---------- */
+let settings = { provider:"claude", keys:{}, models:{}, customBase:"",
+                 defaultPersona:"", userName:"我", botName:"助手",
+                 appName:"神经内科知识库" };
+let knowledge = [];
+let conversations = [];     // 多个对话，每个 {id,title,createdAt,log,persona,provider}
+let currentId = null;       // 当前打开的对话 id
+let editingId = null;
+let busy = false;
+let pendingImages = [];      // 待发送的图片 [{dataUrl, mediaType, data}]
+let abortCtrl = null;        // 当前请求的中止控制器
+let tags = [];               // 标签 [{id,name,group}]
+
+/* ---------- 工具函数 ---------- */
+function newConvoObj(){
+  return {
+    id: "c" + Date.now() + Math.random().toString(36).slice(2,6),
+    title: "新对话",
+    createdAt: Date.now(),
+    log: [],                            // [{role:'user'|'bot', content, sources?, versions?, favorite?}]
+    persona: settings.defaultPersona || "",
+    provider: settings.provider || "claude",   // 该对话使用的模型提供方
+    pinned: 0,                          // 置顶时间戳，0=未置顶
+    favorite: 0,                        // 收藏时间戳，0=未收藏
+    pdfs: []                            // 本对话上传的 PDF [{id,name,data,text,kind}]
+  };
+}
+function curConvo(){
+  return conversations.find(c=>c.id===currentId) || null;
+}
+function fmtDate(ts){
+  const d = new Date(ts);
+  const p = n=>String(n).padStart(2,"0");
+  return `${d.getMonth()+1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function openModal(id){ document.getElementById(id).classList.add("show"); }
+function closeModal(id){ document.getElementById(id).classList.remove("show"); }
+
+/* ---------- 初始化 ---------- */
+async function init(){
+  const s = await Store.get("nkb_settings");
+  if(s){
+    try{
+      const o = JSON.parse(s);
+      // 兼容旧版本格式 {provider,key,model}
+      if(o.key!==undefined && !o.keys){
+        settings.provider = o.provider || "claude";
+        settings.keys = {}; settings.models = {};
+        if(o.key) settings.keys[settings.provider] = o.key;
+        if(o.model) settings.models[settings.provider] = o.model;
+      }else{
+        settings = Object.assign({provider:"claude",keys:{},models:{},customBase:"",
+          defaultPersona:"",userName:"我",botName:"助手",appName:"神经内科知识库"}, o);
+      }
+    }catch(e){}
+  }
+  if(!settings.userName) settings.userName = "我";
+  if(!settings.botName) settings.botName = "助手";
+  if(!settings.appName) settings.appName = "神经内科知识库";
+
+  // 知识库：从 IndexedDB 读取
+  knowledge = await KBStore.getEntries();
+  tags = await KBStore.getTags();
+  // 迁移：旧版本知识库存在 localStorage 的 nkb_knowledge 里
+  if(knowledge.length===0){
+    const oldK = await Store.get("nkb_knowledge");
+    if(oldK){
+      try{
+        const arr = JSON.parse(oldK)||[];
+        if(arr.length){
+          // 旧条目没有 tags 字段，补上空数组
+          knowledge = arr.map(e=>({
+            id: e.id || ("k"+Date.now()+Math.random().toString(36).slice(2,6)),
+            title: e.title||"", content: e.content||"",
+            tags: e.tags||[],
+            createdAt: e.createdAt||Date.now(),
+            updatedAt: e.updatedAt||Date.now()
+          }));
+          await KBStore.saveEntries(knowledge);
+        }
+      }catch(e){}
+    }
+  }
+
+  const cv = await Store.get("nkb_convos");
+  if(cv){ try{ conversations = JSON.parse(cv)||[]; }catch(e){} }
+  const ci = await Store.get("nkb_current");
+  if(ci) currentId = ci;
+
+  // 迁移：旧版本单一聊天记录 → 转成第一个对话
+  if(conversations.length===0){
+    const old = await Store.get("nkb_chatlog");
+    if(old){
+      try{
+        const oldLog = JSON.parse(old)||[];
+        if(oldLog.length){
+          conversations.push({
+            id:"c"+Date.now(), title:"（之前的对话）",
+            createdAt:Date.now(), log:oldLog, persona:"", provider:settings.provider
+          });
+        }
+      }catch(e){}
+    }
+  }
+  // 旧对话补齐 provider 字段
+  conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider || "claude"; if(!c.pinned) c.pinned = 0; if(!c.favorite) c.favorite = 0; if(!c.pdfs) c.pdfs = []; });
+  // 至少保证有一个对话
+  if(conversations.length===0) conversations.push(newConvoObj());
+  if(!currentId || !curConvo()) currentId = conversations[0].id;
+
+  buildProvGrid();
+  buildPersonaPresets();
+  renderSettings();
+  renderKb();
+  refreshStatus();
+  applyAppName();
+  renderHistory();
+  renderConvoPdfBar();
+}
+
+function refreshStatus(){
+  // 更新顶栏模型按钮：显示当前对话所用提供方，未配密钥则标红
+  const convo = curConvo();
+  const prov = convo ? convo.provider : settings.provider;
+  const btn = document.getElementById("modelBtn");
+  const label = document.getElementById("modelLabel");
+  if(!btn || !label) return;
+  label.textContent = PROVIDERS[prov] ? PROVIDERS[prov].label : "模型";
+  const hasKey = !!settings.keys[prov];
+  btn.classList.toggle("unset", !hasKey);
+}
+
+/* ---------- 视图切换 ---------- */
+document.querySelectorAll("nav button").forEach(b=>{
+  b.addEventListener("click",()=>{
+    document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    document.getElementById("view-"+b.dataset.v).classList.add("active");
+    if(b.dataset.v==="chat") renderConvoPdfBar();
+  });
+});
+
+/* ---------- 设置 ---------- */
+function buildProvGrid(){
+  const grid = document.getElementById("provGrid");
+  grid.innerHTML = "";
+  PROV_KEYS.forEach(p=>{
+    const b = document.createElement("button");
+    b.textContent = PROVIDERS[p].label;
+    b.dataset.p = p;
+    b.addEventListener("click",()=>{
+      captureFields();          // 先存住当前提供方已填内容
+      settings.provider = p;
+      renderSettings();
+    });
+    grid.appendChild(b);
+  });
+}
+function captureFields(){
+  const cur = settings.provider;
+  settings.keys[cur] = document.getElementById("apiKey").value.trim();
+  settings.models[cur] = document.getElementById("modelName").value.trim();
+  if(cur==="custom") settings.customBase = document.getElementById("baseUrl").value.trim();
+  settings.defaultPersona = document.getElementById("defaultPersona").value;
+  settings.userName = document.getElementById("userName").value.trim() || "我";
+  settings.botName = document.getElementById("botName").value.trim() || "助手";
+  settings.appName = document.getElementById("appName").value.trim() || "神经内科知识库";
+}
+/* 更新模型名显示框的文字 */
+function refreshModelNameBox(){
+  const cur = settings.provider;
+  const v = (settings.models[cur]||"").trim();
+  const txt = document.getElementById("modelNameText");
+  if(v){ txt.textContent = v; txt.style.color = "var(--ink)"; }
+  else{
+    txt.textContent = "默认：" + (PROVIDERS[cur].model || "（需手填）");
+    txt.style.color = "var(--muted)";
+  }
+}
+function renderSettings(){
+  document.querySelectorAll("#provGrid button").forEach(b=>{
+    b.classList.toggle("on", b.dataset.p===settings.provider);
+  });
+  const cur = settings.provider;
+  document.getElementById("apiKey").value = settings.keys[cur] || "";
+  document.getElementById("modelName").value = settings.models[cur] || "";
+  document.getElementById("defaultPersona").value = settings.defaultPersona || "";
+  document.getElementById("userName").value = settings.userName || "";
+  document.getElementById("botName").value = settings.botName || "";
+  document.getElementById("appName").value = settings.appName || "";
+  const baseField = document.getElementById("baseField");
+  if(cur==="custom"){
+    baseField.style.display = "block";
+    document.getElementById("baseUrl").value = settings.customBase || "";
+  }else{
+    baseField.style.display = "none";
+  }
+  refreshModelNameBox();
+  setModelHint("");
+}
+document.getElementById("saveSetBtn").addEventListener("click", async ()=>{
+  captureFields();
+  await Store.set("nkb_settings", JSON.stringify(settings));
+  refreshStatus();
+  applyAppName();
+  renderHistory();          // 称呼可能已更改，重渲染当前对话
+  const f = document.getElementById("savedFlash");
+  f.textContent = "✓ 已保存";
+  setTimeout(()=>{ f.textContent=""; }, 2000);
+});
+
+/* 应用名称：写到文档标题 */
+function applyAppName(){
+  const name = (settings.appName||"").trim() || "神经内科知识库";
+  document.title = name;
+}
+
+/* ---------- API 密钥显示/隐藏 ---------- */
+document.getElementById("keyToggle").addEventListener("click",()=>{
+  const inp = document.getElementById("apiKey");
+  const btn = document.getElementById("keyToggle");
+  if(inp.type==="password"){
+    inp.type = "text"; btn.textContent = "🙈"; btn.classList.add("on");
+  }else{
+    inp.type = "password"; btn.textContent = "👁"; btn.classList.remove("on");
+  }
+});
+
+/* ---------- 自动获取模型列表 ---------- */
+let fetchedModels = [];        // 当前提供方已获取到的模型 id 列表
+function setModelHint(text, warn){
+  const h = document.getElementById("modelHint");
+  h.textContent = text || "";
+  h.style.color = warn ? "var(--warn)" : "var(--muted)";
+}
+async function fetchModels(){
+  captureFields();
+  const prov = PROVIDERS[settings.provider];
+  const key = settings.keys[settings.provider] || "";
+  let base = settings.provider==="custom" ? (settings.customBase||"") : prov.base;
+  base = base.replace(/\/+$/,"");
+  if(!key){ setModelHint("请先填写 API 密钥再获取列表。", true); return; }
+  if(settings.provider==="custom" && !base){ setModelHint("自定义提供方需先填接口地址。", true); return; }
+
+  const btn = document.getElementById("fetchModelsBtn");
+  btn.disabled = true; btn.textContent = "获取中…";
+  setModelHint("正在拉取模型列表…", false);
+
+  try{
+    let ids = [];
+    if(prov.type==="anthropic"){
+      const r = await fetch(base + "/v1/models",{
+        headers:{ "x-api-key":key, "anthropic-version":"2023-06-01",
+                  "anthropic-dangerous-direct-browser-access":"true" }
+      });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error?.message || ("请求失败 "+r.status));
+      ids = (d.data||[]).map(m=>m.id);
+    }else if(prov.type==="gemini"){
+      const r = await fetch(base + "/models?key=" + encodeURIComponent(key));
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error?.message || ("请求失败 "+r.status));
+      ids = (d.models||[])
+        .filter(m=>(m.supportedGenerationMethods||[]).includes("generateContent"))
+        .map(m=>(m.name||"").replace(/^models\//,""));
+    }else{
+      const r = await fetch(base + "/models",{
+        headers:{ "authorization":"Bearer "+key }
+      });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error?.message || ("请求失败 "+r.status));
+      ids = (d.data||[]).map(m=>m.id);
+    }
+    ids = [...new Set(ids)].filter(Boolean).sort();
+    if(ids.length===0){
+      fetchedModels = [];
+      setModelHint("接口返回空列表，请手动填写模型名。", true);
+    }else{
+      fetchedModels = ids;
+      setModelHint("已获取 " + ids.length + " 个模型，点上方模型框选择。", false);
+      openModelNameModal();        // 获取成功后直接打开选择列表
+    }
+  }catch(err){
+    setModelHint("获取失败：" + err.message + "（可手动输入模型名）", true);
+  }
+  btn.disabled = false; btn.textContent = "获取列表";
+}
+document.getElementById("fetchModelsBtn").addEventListener("click", fetchModels);
+
+/* ---------- 模型名选择弹窗 ---------- */
+function openModelNameModal(){
+  const box = document.getElementById("modelNameList");
+  box.innerHTML = "";
+  const cur = (settings.models[settings.provider]||"").trim();
+  if(fetchedModels.length===0){
+    box.innerHTML = '<div class="mn-empty">还没有获取到模型列表。<br>'
+      + '可先点「获取列表」，或用下方「手动输入」。</div>';
+  }else{
+    fetchedModels.forEach(id=>{
+      const div = document.createElement("div");
+      div.className = "mn-item" + (id===cur ? " on" : "");
+      const name = document.createElement("span");
+      name.textContent = id;
+      div.appendChild(name);
+      if(id===cur){
+        const tick = document.createElement("span");
+        tick.className = "mn-tick"; tick.textContent = "✓";
+        div.appendChild(tick);
+      }
+      div.addEventListener("click",()=>{
+        settings.models[settings.provider] = id;
+        document.getElementById("modelName").value = id;
+        refreshModelNameBox();
+        // 不关闭弹窗：刷新选中态，让用户可继续对比，自行点「关闭」
+        box.querySelectorAll(".mn-item").forEach(el=>{
+          el.classList.remove("on");
+          const tk = el.querySelector(".mn-tick");
+          if(tk) tk.remove();
+        });
+        div.classList.add("on");
+        const tick = document.createElement("span");
+        tick.className = "mn-tick"; tick.textContent = "✓";
+        div.appendChild(tick);
+      });
+      box.appendChild(div);
+    });
+  }
+  openModal("modelNameModal");
+}
+document.getElementById("modelNameBox").addEventListener("click", openModelNameModal);
+document.getElementById("modelNameClose").addEventListener("click",()=>closeModal("modelNameModal"));
+document.getElementById("modelNameModal").addEventListener("click",e=>{
+  if(e.target.id==="modelNameModal") closeModal("modelNameModal");
+});
+document.getElementById("modelNameManual").addEventListener("click",()=>{
+  const cur = (settings.models[settings.provider]||"");
+  const v = prompt("手动输入模型名称：", cur);
+  if(v!==null){
+    settings.models[settings.provider] = v.trim();
+    document.getElementById("modelName").value = v.trim();
+    refreshModelNameBox();
+  }
+  closeModal("modelNameModal");
+});
+
+/* ---------- 知识库 ---------- */
+let kbFilterTagIds = [];      // 当前筛选选中的标签 id
+let kbSearchKw = "";          // 当前搜索关键词
+let kbEditingTagIds = [];     // 编辑弹窗中当前条目已选标签
+
+const TAG_GROUP_ORDER = ["中医","西医","症状","疾病","人物","机制","其他"];
+
+function tagById(id){ return tags.find(t=>t.id===id) || null; }
+
+/* 渲染顶部标签筛选区 */
+function renderKbFilter(){
+  const box = document.getElementById("kbFilterTags");
+  box.innerHTML = "";
+  if(tags.length===0) return;
+  // 按分组排序展示
+  const sorted = tags.slice().sort((a,b)=>{
+    const ai = TAG_GROUP_ORDER.indexOf(a.group), bi = TAG_GROUP_ORDER.indexOf(b.group);
+    return (ai<0?9:ai) - (bi<0?9:bi);
+  });
+  sorted.forEach(t=>{
+    const btn = document.createElement("button");
+    btn.className = "tag-chip" + (kbFilterTagIds.includes(t.id) ? " on" : "");
+    btn.innerHTML = '<span class="tg-group">'+(t.group||"")+'</span>';
+    btn.appendChild(document.createTextNode(t.name));
+    btn.addEventListener("click",()=>{
+      const i = kbFilterTagIds.indexOf(t.id);
+      if(i>=0) kbFilterTagIds.splice(i,1);
+      else kbFilterTagIds.push(t.id);
+      renderKb();
+    });
+    box.appendChild(btn);
+  });
+}
+
+/* 过滤后的条目列表 */
+/* 把搜索关键词扩展成一组等价词（含同义词），用于知识库搜索框 */
+function expandSearchWords(kw){
+  const w = kw.trim().toLowerCase();
+  if(!w) return [];
+  const out = new Set([w]);
+  SYNONYM_GROUPS.forEach(group=>{
+    // 关键词与组内任一词互相包含，则整组都算等价
+    if(group.some(g=>w.includes(g) || g.includes(w))){
+      group.forEach(g=>out.add(g));
+    }
+  });
+  return [...out];
+}
+
+function filteredKb(){
+  let list = knowledge.slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  const kw = kbSearchKw.trim().toLowerCase();
+  if(kw){
+    // 关键词扩展同义词：搜"头疼"也能找到"偏头痛"
+    const words = expandSearchWords(kw);
+    list = list.filter(e=>{
+      const title = (e.title||"").toLowerCase();
+      const content = (e.content||"").toLowerCase();
+      const tagNames = (e.tags||[]).map(tid=>{
+        const t = tagById(tid); return t ? t.name.toLowerCase() : "";
+      }).join(" ");
+      // 任一等价词命中标题/内容/标签即算匹配
+      return words.some(word=>
+        title.includes(word) || content.includes(word) || tagNames.includes(word));
+    });
+  }
+  // 标签筛选：条目须包含所有选中的标签（与逻辑）
+  if(kbFilterTagIds.length){
+    list = list.filter(e=>
+      kbFilterTagIds.every(tid=>(e.tags||[]).includes(tid)));
+  }
+  return list;
+}
+
+function renderKb(){
+  renderKbFilter();
+  const list = document.getElementById("kbList");
+  const items = filteredKb();
+  const filtering = kbSearchKw.trim() || kbFilterTagIds.length;
+  document.getElementById("kbCount").textContent =
+    filtering ? `${items.length} / ${knowledge.length} 条` : `共 ${knowledge.length} 条`;
+  list.innerHTML = "";
+  if(knowledge.length===0){
+    list.innerHTML = `<div class="empty-hint" style="padding:30px 10px;">
+      还没有知识条目。<br>点上方「新增条目」把你的笔记、要点录进来。</div>`;
+    return;
+  }
+  if(items.length===0){
+    list.innerHTML = `<div class="empty-hint" style="padding:30px 10px;">
+      没有符合条件的条目。</div>`;
+    return;
+  }
+  items.forEach(item=>{
+    const div = document.createElement("div");
+    div.className = "kb-item";
+    const h = document.createElement("h3");
+    h.textContent = item.title || "(无标题)";
+    const p = document.createElement("p");
+    p.textContent = item.content || "";
+    div.appendChild(h); div.appendChild(p);
+    // 标签
+    if((item.tags||[]).length){
+      const tg = document.createElement("div");
+      tg.className = "kb-tags";
+      item.tags.forEach(tid=>{
+        const t = tagById(tid);
+        if(t){
+          const s = document.createElement("span");
+          s.textContent = t.name;
+          tg.appendChild(s);
+        }
+      });
+      div.appendChild(tg);
+    }
+    const acts = document.createElement("div");
+    acts.className = "acts";
+    const editBtn = document.createElement("button");
+    editBtn.className = "edit"; editBtn.textContent = "编辑";
+    editBtn.addEventListener("click",()=>openKbModal(item));
+    const delBtn = document.createElement("button");
+    delBtn.className = "del"; delBtn.textContent = "删除";
+    delBtn.addEventListener("click",()=>delKb(item.id));
+    acts.appendChild(editBtn); acts.appendChild(delBtn);
+    div.appendChild(acts);
+    list.appendChild(div);
+  });
+}
+
+/* 编辑弹窗里渲染标签选择区 */
+function renderKbTagPick(){
+  const box = document.getElementById("kbTagPick");
+  box.innerHTML = "";
+  const sorted = tags.slice().sort((a,b)=>{
+    const ai = TAG_GROUP_ORDER.indexOf(a.group), bi = TAG_GROUP_ORDER.indexOf(b.group);
+    return (ai<0?9:ai) - (bi<0?9:bi);
+  });
+  sorted.forEach(t=>{
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tag-chip" + (kbEditingTagIds.includes(t.id) ? " on" : "");
+    btn.innerHTML = '<span class="tg-group">'+(t.group||"")+'</span>';
+    btn.appendChild(document.createTextNode(t.name));
+    btn.addEventListener("click",()=>{
+      const i = kbEditingTagIds.indexOf(t.id);
+      if(i>=0) kbEditingTagIds.splice(i,1);
+      else kbEditingTagIds.push(t.id);
+      renderKbTagPick();
+    });
+    // 长按删除标签
+    attachLongPress(btn, ()=>deleteTag(t));
+    box.appendChild(btn);
+  });
+}
+
+/* 删除一个标签：标签本身删掉，所有条目去掉这个标签，条目保留 */
+async function deleteTag(t){
+  if(!confirm('删除标签「'+t.name+'」？\n用到它的知识条目会保留，只是去掉这个标签。')) return;
+  tags = tags.filter(x=>x.id!==t.id);
+  // 从所有条目中移除该标签
+  let changed = false;
+  knowledge.forEach(e=>{
+    if(e.tags && e.tags.includes(t.id)){
+      e.tags = e.tags.filter(id=>id!==t.id);
+      changed = true;
+    }
+  });
+  // 从当前编辑态、筛选态移除
+  kbEditingTagIds = kbEditingTagIds.filter(id=>id!==t.id);
+  kbFilterTagIds = kbFilterTagIds.filter(id=>id!==t.id);
+  await KBStore.saveTags(tags);
+  if(changed) await KBStore.saveEntries(knowledge);
+  renderKbTagPick();
+  renderKb();
+}
+
+function openKbModal(item){
+  editingId = item ? item.id : null;
+  document.getElementById("kbModalTitle").textContent = item ? "编辑条目" : "新增条目";
+  document.getElementById("kbTitle").value = item ? item.title : "";
+  document.getElementById("kbContent").value = item ? item.content : "";
+  kbEditingTagIds = item ? (item.tags||[]).slice() : [];
+  document.getElementById("kbNewTag").value = "";
+  renderKbTagPick();
+  openModal("kbModal");
+}
+document.getElementById("addKbBtn").addEventListener("click",()=>openKbModal(null));
+document.getElementById("kbCancel").addEventListener("click",()=>closeModal("kbModal"));
+document.getElementById("kbModal").addEventListener("click",e=>{
+  if(e.target.id==="kbModal") closeModal("kbModal");
+});
+
+/* 添加新标签 */
+document.getElementById("kbAddTagBtn").addEventListener("click", async ()=>{
+  const name = document.getElementById("kbNewTag").value.trim();
+  if(!name) return;
+  const group = document.getElementById("kbNewTagGroup").value;
+  // 同名标签已存在则直接选中，不重复创建
+  let existing = tags.find(t=>t.name===name);
+  if(!existing){
+    existing = { id:"t"+Date.now()+Math.random().toString(36).slice(2,5),
+                 name, group };
+    tags.push(existing);
+    await KBStore.saveTags(tags);
+  }
+  if(!kbEditingTagIds.includes(existing.id)) kbEditingTagIds.push(existing.id);
+  document.getElementById("kbNewTag").value = "";
+  renderKbTagPick();
+});
+
+document.getElementById("kbSave").addEventListener("click", async ()=>{
+  const t = document.getElementById("kbTitle").value.trim();
+  const c = document.getElementById("kbContent").value.trim();
+  if(!t && !c){ closeModal("kbModal"); return; }
+  const now = Date.now();
+  if(editingId){
+    const it = knowledge.find(x=>x.id===editingId);
+    if(it){ it.title=t; it.content=c; it.tags=kbEditingTagIds.slice(); it.updatedAt=now; }
+  }else{
+    knowledge.push({ id:"k"+now+Math.random().toString(36).slice(2,5),
+      title:t, content:c, tags:kbEditingTagIds.slice(),
+      createdAt:now, updatedAt:now });
+  }
+  await KBStore.saveEntries(knowledge);
+  closeModal("kbModal"); renderKb(); refreshStatus();
+});
+async function delKb(id){
+  if(!confirm("删除这条知识？")) return;
+  knowledge = knowledge.filter(x=>x.id!==id);
+  await KBStore.saveEntries(knowledge);
+  renderKb(); refreshStatus();
+}
+/* 搜索框 */
+document.getElementById("kbSearch").addEventListener("input",e=>{
+  kbSearchKw = e.target.value;
+  renderKb();
+});
+
+/* ---------- 检索：中文友好的二元字组匹配 ---------- */
+function bigrams(s){
+  s = (s||"").toLowerCase().replace(/[\s\p{P}\p{S}]+/gu,"");
+  const g=[];
+  for(let i=0;i<s.length-1;i++) g.push(s.slice(i,i+2));
+  return g;
+}
+
+/* 神经内科常见近义词／别名表：同一行的词检索时互相等价
+   录入条目用了其中一个词，提问用了另一个，也能匹配上 */
+const SYNONYM_GROUPS = [
+  ["头痛","头疼"],
+  ["卒中","中风","脑卒中","脑梗","脑梗死","脑梗塞","脑血管意外"],
+  ["脑出血","出血性卒中","颅内出血"],
+  ["短暂性脑缺血发作","tia"],
+  ["癫痫","痫性发作","抽搐","惊厥"],
+  ["眩晕","头晕"],
+  ["帕金森","帕金森病","震颤麻痹"],
+  ["阿尔茨海默","阿尔茨海默病","老年痴呆","认知障碍","痴呆"],
+  ["多发性硬化","ms"],
+  ["重症肌无力","mg"],
+  ["格林巴利","吉兰巴雷","急性炎性脱髓鞘性多发性神经病"],
+  ["面瘫","面神经麻痹","贝尔麻痹"],
+  ["三叉神经痛"],
+  ["失眠","睡眠障碍","入睡困难"],
+  ["麻木","感觉异常","感觉障碍"],
+  ["肌无力","肢体无力"],
+  ["复视","视物重影"],
+  ["共济失调","步态不稳","走路不稳"],
+  ["溶栓","静脉溶栓","rtpa","阿替普酶"],
+  ["抗血小板","阿司匹林","氯吡格雷"],
+  ["脑电图","eeg"],
+  ["核磁","磁共振","mri"],
+  ["ct","计算机断层"]
+];
+/* 把一个词扩展成它的所有近义词 */
+function expandSynonyms(word){
+  const w = word.toLowerCase();
+  const out = new Set([w]);
+  SYNONYM_GROUPS.forEach(group=>{
+    if(group.some(g=>w.includes(g) || g.includes(w))){
+      group.forEach(g=>out.add(g));
+    }
+  });
+  return [...out];
+}
+
+/* 把查询切成检索词块：连续中文按 bigram，英文/数字按整词 */
+function queryTokens(query){
+  const q = (query||"").toLowerCase();
+  const tokens = new Set();
+  // 英文与数字整词
+  (q.match(/[a-z0-9]+/g)||[]).forEach(w=>{ if(w.length>=2) tokens.add(w); });
+  // 中文 bigram
+  bigrams(q.replace(/[a-z0-9]+/g,"")).forEach(g=>tokens.add(g));
+  return [...tokens];
+}
+
+/* 检索：返回与查询最相关的知识条目（已按相关度排序） */
+function retrieve(query){
+  if(knowledge.length===0) return [];
+
+  // 查询词 + 同义词扩展
+  const baseTokens = queryTokens(query);
+  const expanded = new Set(baseTokens);
+  // 对原始查询里出现的整词做同义词扩展
+  const qLower = (query||"").toLowerCase();
+  SYNONYM_GROUPS.forEach(group=>{
+    if(group.some(g=>qLower.includes(g))){
+      group.forEach(g=>{
+        // 把近义词也切成 token 加入
+        queryTokens(g).forEach(t=>expanded.add(t));
+      });
+    }
+  });
+  const qTokens = [...expanded];
+  if(qTokens.length===0) return knowledge.slice(0, Math.min(5,knowledge.length));
+
+  const scored = knowledge.map(e=>{
+    const title = (e.title||"").toLowerCase();
+    const content = (e.content||"").toLowerCase();
+    // 该条目的标签名
+    const tagNames = (e.tags||[]).map(tid=>{
+      const t = tagById(tid); return t ? t.name.toLowerCase() : "";
+    }).join(" ");
+    let score = 0;
+    qTokens.forEach(tk=>{
+      // 标题命中权重最高，标签其次，正文再次
+      if(title.includes(tk)) score += 3;
+      if(tagNames.includes(tk)) score += 2;
+      if(content.includes(tk)) score += 1;
+    });
+    return { e, score };
+  });
+  scored.sort((a,b)=>b.score-a.score);
+  const hit = scored.filter(x=>x.score>0).slice(0,5).map(x=>x.e);
+  // 完全没命中：条目少就全给，条目多则给最近更新的几条兜底
+  if(hit.length===0){
+    if(knowledge.length<=5) return knowledge.slice();
+    return knowledge.slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,3);
+  }
+  return hit;
+}
+
+/* ---------- 提示词 ---------- */
+function buildSystemPrompt(used, persona){
+  let p = "你是一位严谨的神经内科知识助手，服务对象是一名神经内科医生。";
+  if(used.length){
+    p += "请优先依据下面提供的【知识库摘录】回答问题。规则：\n"
+       + "1. 凡是用到知识库的内容，在相应位置用「条目标题」标注来源。\n"
+       + "2. 若知识库摘录不足以回答，明确写出「知识库未涵盖此点」，再基于通用医学知识谨慎补充，并注明该部分非来自知识库。\n"
+       + "3. 不得编造知识库中不存在的内容。回答简洁、专业、准确。\n\n【知识库摘录】\n";
+    used.forEach((e,i)=>{ p += `〔${i+1}〕${e.title||"无标题"}\n${e.content||""}\n\n`; });
+  }else{
+    p += "当前知识库为空或无相关条目。请基于通用医学知识谨慎回答，"
+       + "并在开头注明「以下回答来自通用知识，未基于个人知识库」。回答简洁、专业、准确。";
+  }
+  if(persona && persona.trim()){
+    p += "\n\n【本次对话的回复偏好】\n在不违反上述规则的前提下，请尽量遵循以下偏好：\n" + persona.trim();
+  }
+  return p;
+}
+
+/* ---------- 模型调用（流式） ----------
+   history 中每条 content 可为字符串，或 {text, images:[{mediaType,data}]}
+   仅多模态模型能识别图片；其余模型只取文本部分
+   signal: AbortSignal，用于中途停止 */
+async function callModel(system, history, onDelta, providerKey, signal){
+  const pk = providerKey || settings.provider;
+  const prov = PROVIDERS[pk];
+  const key = settings.keys[pk] || "";
+  const model = settings.models[pk] || prov.model;
+  let base = pk==="custom" ? (settings.customBase||"") : prov.base;
+  base = base.replace(/\/+$/,"");
+
+  if(!key) throw new Error("「" + prov.label + "」还没有配置 API 密钥，请到「设置」里填写");
+  if(pk==="custom" && !base) throw new Error("自定义提供方需要先填写接口地址");
+  if(!model) throw new Error("请先在设置里填写模型名称");
+
+  // 把一条 content 取出纯文本
+  const asText = c => (typeof c==="string") ? c : (c.text||"");
+  // 是否带图
+  const hasImg = c => c && typeof c==="object" && c.images && c.images.length;
+  // 是否带 PDF
+  const hasPdf = c => c && typeof c==="object" && c.pdfs && c.pdfs.length;
+  // 把 PDF 的提取文字拼成一段（给 DeepSeek/千问 等不支持原生 PDF 的）
+  const pdfsAsText = c => {
+    if(!hasPdf(c)) return "";
+    let s = "";
+    c.pdfs.forEach(p=>{
+      if(p.kind==="text" || p.kind==="partial"){
+        s += "\n\n【PDF文档：" + p.name + "】\n" + (p.text||"");
+      }
+    });
+    return s;
+  };
+  // 检查是否有无法用文字方式处理的 PDF（扫描版/解析失败）
+  const badPdfNames = c => {
+    if(!hasPdf(c)) return [];
+    return c.pdfs.filter(p=>p.kind==="scanned"||p.kind==="fail").map(p=>p.name);
+  };
+
+  let url, headers, body, parseSSE;
+
+  if(prov.type==="anthropic"){
+    url = base + "/v1/messages";
+    headers = {
+      "content-type":"application/json",
+      "x-api-key":key,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    };
+    body = JSON.stringify({ model, max_tokens:1500, system, stream:true,
+      messages:history.map(m=>{
+        const c = m.content;
+        if(hasImg(c) || hasPdf(c)){
+          const parts = [];
+          // PDF：Claude 支持 document 类型直接发原始文件
+          if(hasPdf(c)){
+            c.pdfs.forEach(p=>{
+              if(p.data) parts.push({
+                type:"document",
+                source:{ type:"base64", media_type:"application/pdf", data:p.data }
+              });
+            });
+          }
+          if(hasImg(c)){
+            c.images.forEach(im=>parts.push({
+              type:"image",
+              source:{ type:"base64", media_type:im.mediaType, data:im.data }
+            }));
+          }
+          if(asText(c)) parts.push({type:"text", text:asText(c)});
+          return { role:m.role, content:parts };
+        }
+        return { role:m.role, content:asText(c) };
+      }) });
+    parseSSE = (obj)=>{
+      if(obj.type==="content_block_delta" && obj.delta && obj.delta.text) return obj.delta.text;
+      return "";
+    };
+  }else if(prov.type==="gemini"){
+    url = base + "/models/" + model + ":streamGenerateContent?alt=sse&key=" + encodeURIComponent(key);
+    headers = { "content-type":"application/json" };
+    body = JSON.stringify({
+      systemInstruction:{ parts:[{text:system}] },
+      contents:history.map(m=>{
+        const c = m.content;
+        const parts = [];
+        // PDF：Gemini 用 inlineData 直接发 PDF
+        if(hasPdf(c)){
+          c.pdfs.forEach(p=>{
+            if(p.data) parts.push({ inlineData:{ mimeType:"application/pdf", data:p.data } });
+          });
+        }
+        if(hasImg(c)){
+          c.images.forEach(im=>{
+            parts.push({ inlineData:{ mimeType:im.mediaType, data:im.data } });
+          });
+        }
+        parts.push({ text:asText(c) || " " });
+        return { role: m.role==="assistant" ? "model" : "user", parts };
+      })
+    });
+    parseSSE = (obj)=>{
+      try{ return obj.candidates[0].content.parts.map(p=>p.text||"").join(""); }
+      catch(e){ return ""; }
+    };
+  }else{
+    // openai 兼容：GPT / DeepSeek / 千问 / Grok / 自定义
+    url = base + "/chat/completions";
+    headers = { "content-type":"application/json", "authorization":"Bearer "+key };
+    const isGpt = (pk==="openai");
+    body = JSON.stringify({ model, stream:true,
+      messages:[{role:"system",content:system}, ...history.map(m=>{
+        const c = m.content;
+        if(hasImg(c) || hasPdf(c)){
+          const parts = [];
+          if(hasPdf(c)){
+            if(isGpt){
+              // GPT 支持 file 类型直接发 PDF
+              c.pdfs.forEach(p=>{
+                if(p.data) parts.push({
+                  type:"file",
+                  file:{ filename:p.name, file_data:"data:application/pdf;base64,"+p.data }
+                });
+              });
+            }
+            // 非 GPT（DeepSeek/千问）：PDF 文字会并进文本，见下方
+          }
+          if(hasImg(c)){
+            c.images.forEach(im=>parts.push({
+              type:"image_url",
+              image_url:{ url:"data:"+im.mediaType+";base64,"+im.data }
+            }));
+          }
+          let txt = asText(c);
+          // 非 GPT：把 PDF 提取的文字附进文本
+          if(hasPdf(c) && !isGpt) txt += pdfsAsText(c);
+          if(txt) parts.push({type:"text", text:txt});
+          return { role:m.role, content:parts.length===1 && parts[0].type==="text"
+            ? parts[0].text : parts };
+        }
+        return { role:m.role, content:asText(c) };
+      })] });
+    parseSSE = (obj)=>{
+      try{ return obj.choices[0].delta.content || ""; }
+      catch(e){ return ""; }
+    };
+  }
+
+  let r;
+  try{
+    r = await fetch(url,{ method:"POST", headers, body, signal });
+  }catch(e){
+    if(e.name==="AbortError") throw e;       // 用户主动停止，向上传递
+    throw new Error("网络连接失败，请检查网络或 VPN");
+  }
+  if(!r.ok){
+    let msg = "";
+    try{ const d = await r.json(); msg = d.error?.message || d.message || ""; }catch(e){}
+    // 按状态码给更具体的提示
+    if(r.status===401 || r.status===403){
+      throw new Error("API 密钥无效或无权限，请到「设置」检查密钥" + (msg?("（"+msg+"）"):""));
+    }
+    if(r.status===429){
+      throw new Error("请求过于频繁或额度已用尽，请稍后再试或检查账户余额");
+    }
+    if(r.status===404){
+      throw new Error("模型名称可能不对，接口找不到「" + model + "」");
+    }
+    if(r.status>=500){
+      throw new Error("模型服务端出错（" + r.status + "），通常稍后重试即可");
+    }
+    throw new Error(msg || ("请求失败 " + r.status));
+  }
+
+  // 读取 SSE 流
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buf = "", full = "";
+  while(true){
+    const { done, value } = await reader.read();
+    if(done) break;
+    buf += decoder.decode(value, {stream:true});
+    const lines = buf.split("\n");
+    buf = lines.pop();                       // 末行可能不完整，留到下一轮
+    for(let line of lines){
+      line = line.trim();
+      if(!line || !line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if(payload==="[DONE]") continue;
+      let obj;
+      try{ obj = JSON.parse(payload); }catch(e){ continue; }
+      const piece = parseSSE(obj);
+      if(piece){ full += piece; if(onDelta) onDelta(piece); }
+    }
+  }
+  if(!full) throw new Error("未收到内容（可能该接口不支持流式，或返回为空）");
+  return full;
+}
+
+/* ---------- 聊天 UI ---------- */
+const chatScroll = document.getElementById("chatScroll");
+// 强制滚到底（发新消息、切换对话时用）
+function scrollDown(){ chatScroll.scrollTop = chatScroll.scrollHeight; }
+// 跟随滚：仅当用户本来就贴在底部时才滚，否则不打断其上滑查看
+function followScroll(){
+  const nearBottom = chatScroll.scrollHeight - chatScroll.scrollTop
+                     - chatScroll.clientHeight < 80;
+  if(nearBottom) chatScroll.scrollTop = chatScroll.scrollHeight;
+}
+
+// 从一条 log 消息取纯文本
+function msgText(c){ return (typeof c==="string") ? c : (c && c.text || ""); }
+// 取图片数组
+function msgImgs(c){ return (c && typeof c==="object" && c.images) ? c.images : []; }
+
+/* 渲染一条消息。logIndex 为它在 convo.log 中的下标（-1 表示临时消息，无操作栏） */
+function addMsg(role, content, sources, logIndex){
+  const empty = document.getElementById("chatEmpty");
+  if(empty) empty.remove();
+  const div = document.createElement("div");
+  div.className = "msg " + (role==="user"?"user":(role==="err"?"bot":"bot"));
+  if(typeof logIndex==="number" && logIndex>=0) div.dataset.idx = logIndex;
+
+  const who = document.createElement("div");
+  who.className = "who";
+  who.textContent = role==="user" ? (settings.userName||"我") : (settings.botName||"助手");
+  div.appendChild(who);
+
+  // 图片（在气泡上方）
+  const imgs = msgImgs(content);
+  if(imgs.length){
+    const wrap = document.createElement("div");
+    wrap.className = "msg-imgs";
+    imgs.forEach(im=>{
+      const img = document.createElement("img");
+      img.src = im.dataUrl || ("data:"+im.mediaType+";base64,"+im.data);
+      wrap.appendChild(img);
+    });
+    div.appendChild(wrap);
+  }
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble" + (role==="err"?" err":"");
+  bubble.textContent = msgText(content);
+  div.appendChild(bubble);
+
+  if(sources && sources.length){
+    const s = document.createElement("div");
+    s.className = "src";
+    s.appendChild(document.createTextNode("依据："));
+    sources.forEach(e=>{
+      const t = document.createElement("span");
+      t.className = "tag";
+      t.textContent = e.title || "无标题条目";
+      s.appendChild(t);
+    });
+    div.appendChild(s);
+  }
+
+  // 操作栏：复制 / 编辑 / 译 / 收藏 / 重新生成（错误消息不加）
+  if(role!=="err" && typeof logIndex==="number" && logIndex>=0){
+    const convo = curConvo();
+    const m = convo ? convo.log[logIndex] : null;
+
+    // bot 消息：多版本切换条（有 2 个及以上版本时显示）
+    if(role!=="user" && m && m.versions && m.versions.length>1){
+      const vbar = document.createElement("div");
+      vbar.className = "ver-bar";
+      const vi = (typeof m.activeVer==="number") ? m.activeVer : m.versions.length-1;
+      const prev = document.createElement("button");
+      prev.textContent = "‹"; prev.disabled = vi<=0;
+      const num = document.createElement("span");
+      num.className = "ver-num";
+      num.textContent = (vi+1) + " / " + m.versions.length;
+      const next = document.createElement("button");
+      next.textContent = "›"; next.disabled = vi>=m.versions.length-1;
+      prev.addEventListener("click",()=>switchVersion(logIndex, vi-1));
+      next.addEventListener("click",()=>switchVersion(logIndex, vi+1));
+      vbar.appendChild(prev); vbar.appendChild(num); vbar.appendChild(next);
+      div.appendChild(vbar);
+    }
+
+    const acts = document.createElement("div");
+    acts.className = "msg-acts";
+
+    const copyBtn = document.createElement("button");
+    copyBtn.textContent = "复制";
+    copyBtn.addEventListener("click",()=>{
+      const txt = msgText(content);
+      const done = ()=>{ copyBtn.textContent="已复制"; setTimeout(()=>copyBtn.textContent="复制",1500); };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));
+      }else fallbackCopy(txt,done);
+    });
+    acts.appendChild(copyBtn);
+
+    const editBtn = document.createElement("button");
+    editBtn.textContent = "编辑";
+    editBtn.addEventListener("click",()=>startEdit(div, logIndex, role));
+    acts.appendChild(editBtn);
+
+    // 译
+    const transBtn = document.createElement("button");
+    transBtn.textContent = "译";
+    transBtn.addEventListener("click",()=>translateMsg(div, logIndex, transBtn));
+    acts.appendChild(transBtn);
+
+    // 收藏（用星标，收藏的回复进收藏夹）
+    const favBtn = document.createElement("button");
+    favBtn.textContent = (m && m.favorite) ? "★ 已藏" : "☆ 收藏";
+    if(m && m.favorite) favBtn.style.color = "#d9a441";
+    favBtn.addEventListener("click",()=>{
+      if(!m) return;
+      m.favorite = m.favorite ? 0 : Date.now();
+      favBtn.textContent = m.favorite ? "★ 已藏" : "☆ 收藏";
+      favBtn.style.color = m.favorite ? "#d9a441" : "";
+      saveConvos();
+    });
+    acts.appendChild(favBtn);
+
+    // 重新生成（仅 bot 消息）
+    if(role!=="user"){
+      const regenBtn = document.createElement("button");
+      regenBtn.textContent = "↻ 重答";
+      regenBtn.addEventListener("click",()=>regenerateAt(logIndex));
+      acts.appendChild(regenBtn);
+    }
+
+    div.appendChild(acts);
+  }
+
+  chatScroll.appendChild(div);
+  scrollDown();
+  return bubble;
+}
+function fallbackCopy(text, done){
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    done && done();
+  }catch(e){}
+}
+
+/* 进入编辑态 */
+function startEdit(msgDiv, logIndex, role){
+  if(busy) return;
+  const convo = curConvo();
+  if(!convo || !convo.log[logIndex]) return;
+  const orig = msgText(convo.log[logIndex].content);
+  msgDiv.querySelectorAll(".bubble,.msg-acts,.msg-imgs,.src").forEach(el=>el.style.display="none");
+
+  const ta = document.createElement("textarea");
+  ta.className = "edit-area";
+  ta.value = orig;
+  const acts = document.createElement("div");
+  acts.className = "edit-acts";
+  const ok = document.createElement("button");
+  ok.className = "e-ok";
+  ok.textContent = role==="user" ? "保存并重新回答" : "保存";
+  const cancel = document.createElement("button");
+  cancel.className = "e-cancel";
+  cancel.textContent = "取消";
+  acts.appendChild(cancel); acts.appendChild(ok);
+  msgDiv.appendChild(ta); msgDiv.appendChild(acts);
+  ta.focus();
+  // 按内容自动撑高（上限由 CSS 的 max-height 控制）
+  const autoGrow = ()=>{ ta.style.height="auto";
+    ta.style.height = Math.min(ta.scrollHeight, window.innerHeight*0.58) + "px"; };
+  autoGrow();
+  ta.addEventListener("input", autoGrow);
+
+  const exitEdit = ()=>{ ta.remove(); acts.remove();
+    msgDiv.querySelectorAll(".bubble,.msg-acts,.msg-imgs,.src").forEach(el=>el.style.display=""); };
+  cancel.addEventListener("click", exitEdit);
+  ok.addEventListener("click",()=>{
+    const v = ta.value.trim();
+    if(!v){ exitEdit(); return; }
+    const m = convo.log[logIndex];
+    // 保留原有图片（若有）
+    const imgs = msgImgs(m.content);
+    m.content = imgs.length ? {text:v, images:imgs} : v;
+    // bot 消息有多版本时，同步更新当前选中版本
+    if(role!=="user" && m.versions && m.versions.length){
+      const vi = (typeof m.activeVer==="number") ? m.activeVer : m.versions.length-1;
+      m.versions[vi] = v;
+    }
+    saveConvos();
+    if(role==="user"){
+      convo.log = convo.log.slice(0, logIndex+1);
+      saveConvos();
+      renderHistory();
+      regenerate();
+    }else{
+      renderHistory();
+    }
+  });
+}
+
+function addTyping(){
+  const div = document.createElement("div");
+  div.className = "msg bot"; div.id = "typingMsg";
+  const who = document.createElement("div");
+  who.className = "who";
+  who.textContent = settings.botName || "助手";
+  const bub = document.createElement("div");
+  bub.className = "bubble";
+  bub.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  div.appendChild(who); div.appendChild(bub);
+  chatScroll.appendChild(div); scrollDown();
+}
+function removeTyping(){ const t=document.getElementById("typingMsg"); if(t) t.remove(); }
+
+/* 渲染当前对话的全部消息 */
+function renderHistory(){
+  chatScroll.innerHTML = "";
+  const convo = curConvo();
+  refreshStatus();
+  if(!convo || !convo.log.length){
+    chatScroll.innerHTML = '<div class="empty-hint" id="chatEmpty">'
+      + '在下方提出你的神经内科问题。<br>回答会优先依据你自己录入的知识库，并标注引用来源。</div>';
+    return;
+  }
+  convo.log.forEach((m,i)=>{
+    if(m.role==="user") addMsg("user", m.content, null, i);
+    else addMsg("bot", m.content, m.sources||[], i);
+  });
+}
+
+const qInput = document.getElementById("qInput");
+const sendBtn = document.getElementById("sendBtn");
+qInput.addEventListener("input",()=>{
+  qInput.style.height = "auto";
+  qInput.style.height = Math.min(qInput.scrollHeight,120) + "px";
+});
+
+/* 发送按钮：忙碌时变成停止键 */
+function setBusy(on){
+  busy = on;
+  if(on){
+    sendBtn.classList.add("stop");
+    sendBtn.textContent = "■";
+    sendBtn.disabled = false;     // 停止键要可点
+  }else{
+    sendBtn.classList.remove("stop");
+    sendBtn.textContent = "↑";
+    sendBtn.disabled = false;
+  }
+}
+
+/* 估算对话累计字数 */
+function convoCharCount(convo){
+  return convo.log.reduce((n,m)=>n + msgText(m.content).length, 0);
+}
+const COMPRESS_CHARS = 20000;   // 约 2 万字
+const COMPRESS_TURNS = 40;      // 或 40 轮（user 消息数）
+
+/* 核心：执行一次模型调用并把结果写入对话 */
+async function runTurn(convo, used){
+  addTyping();
+  const history = convo.log.map(m=>({
+    role: m.role==="user" ? "user" : "assistant",
+    content: activeContent(m)
+  }));
+  // 把本对话的 PDF 附到最后一条 user 消息上一起发
+  if(convo.pdfs && convo.pdfs.length){
+    for(let i=history.length-1;i>=0;i--){
+      if(history[i].role==="user"){
+        let c = history[i].content;
+        if(typeof c==="string") c = { text:c };
+        else c = Object.assign({}, c);
+        c.pdfs = convo.pdfs.filter(p=>p.kind!=="loading");
+        history[i].content = c;
+        break;
+      }
+    }
+  }
+  abortCtrl = new AbortController();
+  try{
+    const system = buildSystemPrompt(used, convo.persona);
+    let bubble = null, acc = "";
+    const answer = await callModel(system, history, (piece)=>{
+      if(!bubble){
+        removeTyping();
+        const idx = convo.log.length;
+        bubble = addMsg("bot", "", used, idx);
+      }
+      acc += piece;
+      bubble.textContent = acc;
+      followScroll();
+    }, convo.provider, abortCtrl.signal);
+    if(!bubble){ removeTyping(); addMsg("bot", answer, used, convo.log.length); }
+    convo.log.push({ role:"bot", content:answer,
+      sources:used.map(e=>({title:e.title})),
+      versions:[answer], activeVer:0 });
+    saveConvos();
+    maybeOfferCompress(convo);
+  }catch(err){
+    removeTyping();
+    if(err.name==="AbortError"){
+      const last = chatScroll.querySelector(".msg.bot:last-child .bubble");
+      if(last && last.textContent.trim()){
+        const txt = last.textContent;
+        convo.log.push({ role:"bot", content:txt,
+          sources:used.map(e=>({title:e.title})), versions:[txt], activeVer:0 });
+      }
+      saveConvos();
+    }else{
+      addMsg("err","调用失败：" + err.message, null, -1);
+    }
+    return false;
+  }finally{
+    abortCtrl = null;
+  }
+  return true;
+}
+
+/* 取一条消息当前生效的内容（多版本时取选中版本） */
+function activeContent(m){
+  if(m.role!=="user" && m.versions && m.versions.length){
+    const vi = (typeof m.activeVer==="number") ? m.activeVer : m.versions.length-1;
+    return m.versions[vi];
+  }
+  return m.content;
+}
+
+/* 切换某条 bot 消息的版本 */
+function switchVersion(logIndex, vi){
+  const convo = curConvo();
+  if(!convo) return;
+  const m = convo.log[logIndex];
+  if(!m || !m.versions || vi<0 || vi>=m.versions.length) return;
+  m.activeVer = vi;
+  m.content = m.versions[vi];
+  saveConvos();
+  renderHistory();
+}
+
+/* 在某条 bot 消息处重新生成：追加为新版本 */
+async function regenerateAt(logIndex){
+  const convo = curConvo();
+  if(!convo || busy) return;
+  const m = convo.log[logIndex];
+  if(!m || m.role==="user") return;
+  // 找这条之前最近的 user 提问
+  let used = [];
+  for(let i=logIndex-1;i>=0;i--){
+    if(convo.log[i].role==="user"){ used = retrieve(msgText(convo.log[i].content)); break; }
+  }
+  // 用截止到这条消息之前的历史作上下文
+  const history = convo.log.slice(0,logIndex).map(mm=>({
+    role: mm.role==="user" ? "user" : "assistant",
+    content: activeContent(mm)
+  }));
+  setBusy(true);
+  addTyping();
+  abortCtrl = new AbortController();
+  try{
+    const system = buildSystemPrompt(used, convo.persona);
+    let acc = "";
+    const answer = await callModel(system, history, (piece)=>{
+      removeTyping();
+      acc += piece;
+    }, convo.provider, abortCtrl.signal);
+    if(!m.versions) m.versions = [m.content];
+    m.versions.push(answer);
+    m.activeVer = m.versions.length-1;
+    m.content = answer;
+    saveConvos();
+    renderHistory();
+  }catch(err){
+    removeTyping();
+    if(err.name!=="AbortError"){
+      addMsg("err","重新生成失败：" + err.message, null, -1);
+    }
+  }finally{
+    abortCtrl = null;
+    setBusy(false);
+  }
+}
+
+/* 翻译某条消息：结果显示在原文下方 */
+async function translateMsg(msgDiv, logIndex, btn){
+  const convo = curConvo();
+  if(!convo || busy) return;
+  const m = convo.log[logIndex];
+  if(!m) return;
+  // 已翻译则切换显示/隐藏
+  const existing = msgDiv.querySelector(".trans-block");
+  if(existing){ existing.remove(); btn.textContent="译"; return; }
+
+  const text = msgText(activeContent(m));
+  if(!text.trim()) return;
+  btn.textContent = "译…";
+  const sys = "你是翻译助手。如果下面文字是中文，翻译成英文；如果是其他语言，翻译成中文。只输出译文。";
+  abortCtrl = new AbortController();
+  try{
+    const out = await callModel(sys,[{role:"user",content:text}],
+      null, convo.provider, abortCtrl.signal);
+    const block = document.createElement("div");
+    block.className = "trans-block";
+    block.textContent = out;
+    // 插到操作栏之前
+    const acts = msgDiv.querySelector(".msg-acts");
+    msgDiv.insertBefore(block, acts);
+    btn.textContent = "隐藏译文";
+  }catch(err){
+    if(err.name!=="AbortError") btn.textContent = "译(失败)";
+    else btn.textContent = "译";
+  }finally{
+    abortCtrl = null;
+  }
+}
+
+/* 重新生成最后一条回答（用于编辑提问后） */
+async function regenerate(){
+  const convo = curConvo();
+  if(!convo || busy) return;
+  const lastUser = [...convo.log].reverse().find(m=>m.role==="user");
+  const used = lastUser ? retrieve(msgText(lastUser.content)) : [];
+  setBusy(true);
+  await runTurn(convo, used);
+  setBusy(false);
+}
+
+async function send(){
+  // 忙碌时点击 = 停止
+  if(busy){
+    if(abortCtrl) abortCtrl.abort();
+    return;
+  }
+  const q = qInput.value.trim();
+  if(!q && pendingImages.length===0) return;
+  const convo = curConvo();
+  if(!convo) return;
+  if(!settings.keys[convo.provider]){
+    addMsg("err","当前对话使用「" + PROVIDERS[convo.provider].label
+      + "」，但还没有配置它的 API 密钥。请到「设置」填写，或点顶栏模型按钮换一个已配置的。", null, -1);
+    return;
+  }
+  // 带图但模型不支持多模态时提醒
+  if(pendingImages.length && !PROVIDERS[convo.provider].vision){
+    addMsg("err","当前模型「" + PROVIDERS[convo.provider].label
+      + "」不支持识别图片。请点顶栏模型按钮换成 Claude、GPT 或 Gemini。", null, -1);
+    return;
+  }
+  // 对话带 PDF 且当前是 DeepSeek/千问 时，检查有无扫描版（它们处理不了）
+  if(convo.pdfs && convo.pdfs.length){
+    const pk = convo.provider;
+    const textBased = (pk==="deepseek" || pk==="qwen");
+    if(textBased){
+      const bad = convo.pdfs.filter(p=>p.kind==="scanned"||p.kind==="fail");
+      if(bad.length){
+        addMsg("err","本对话里有扫描版或无法解析的 PDF（" + bad.map(p=>p.name).join("、")
+          + "）。「" + PROVIDERS[pk].label + "」只能处理文字，读不了这类 PDF。\n"
+          + "请点顶栏模型按钮换成 Claude、GPT 或 Gemini —— 它们能直接读 PDF 原文件；"
+          + "或在 PDF 列表里删掉这些扫描件。", null, -1);
+        return;
+      }
+    }
+  }
+
+  setBusy(true);
+  const imgs = pendingImages.slice();
+  pendingImages = [];
+  renderPendingImgs();
+  qInput.value = ""; qInput.style.height = "auto";
+
+  const used = retrieve(q);
+  const content = imgs.length
+    ? { text:q, images:imgs.map(i=>({mediaType:i.mediaType, data:i.data, dataUrl:i.dataUrl})) }
+    : q;
+  addMsg("user", content, null, convo.log.length);
+  convo.log.push({ role:"user", content });
+
+  const wasUntitled = !convo.named && (!convo.title || convo.title==="新对话");
+  if(wasUntitled && q){
+    convo.title = q.slice(0,16) + (q.length>16 ? "…" : "");
+  }
+  saveConvos();
+
+  const ok = await runTurn(convo, used);
+  if(!ok){
+    // 失败：撤回刚加入的用户消息
+    if(convo.log.length && convo.log[convo.log.length-1].role==="user"){
+      convo.log.pop();
+      saveConvos();
+      renderHistory();
+    }
+    if(wasUntitled && convo.log.length===0){ convo.title = "新对话"; }
+  }
+  setBusy(false);
+}
+sendBtn.addEventListener("click", send);
+
+/* 回车键：手机端回车换行；电脑端回车发送、Shift+回车换行 */
+const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+qInput.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && !e.shiftKey){
+    if(isTouchDevice) return;
+    e.preventDefault(); send();
+  }
+});
+
+/* ---------- 多对话管理 ---------- */
+async function saveConvos(){
+  await Store.set("nkb_convos", JSON.stringify(conversations));
+  await Store.set("nkb_current", currentId);
+}
+
+/* 抽屉开关 */
+function openDrawer(){
+  document.getElementById("convoSearch").value = "";
+  renderConvoList("");
+  document.getElementById("drawerBg").classList.add("show");
+  document.getElementById("drawer").classList.add("show");
+}
+function closeDrawer(){
+  document.getElementById("drawerBg").classList.remove("show");
+  document.getElementById("drawer").classList.remove("show");
+}
+
+function newConversation(){
+  const c = newConvoObj();
+  conversations.unshift(c);     // 新对话排在最前
+  currentId = c.id;
+  saveConvos();
+  closeDrawer();
+  renderHistory();
+}
+function switchConvo(id){
+  currentId = id;
+  saveConvos();
+  closeDrawer();
+  renderHistory();
+  renderConvoPdfBar();
+}
+function deleteConvo(id){
+  if(!confirm("删除这个对话？此操作无法撤销。")) return;
+  conversations = conversations.filter(c=>c.id!==id);
+  if(conversations.length===0) conversations.push(newConvoObj());
+  if(currentId===id) currentId = conversations[0].id;
+  saveConvos();
+  renderConvoList(document.getElementById("convoSearch").value);
+  renderHistory();
+}
+
+/* 重命名 */
+let renamingId = null;
+function openRename(id){
+  const c = conversations.find(x=>x.id===id);
+  if(!c) return;
+  renamingId = id;
+  document.getElementById("renameInput").value = c.title || "";
+  openModal("renameModal");
+  setTimeout(()=>document.getElementById("renameInput").focus(), 200);
+}
+document.getElementById("renameCancel").addEventListener("click",()=>closeModal("renameModal"));
+document.getElementById("renameModal").addEventListener("click",e=>{
+  if(e.target.id==="renameModal") closeModal("renameModal");
+});
+document.getElementById("renameSave").addEventListener("click",()=>{
+  const c = conversations.find(x=>x.id===renamingId);
+  if(c){
+    const v = document.getElementById("renameInput").value.trim();
+    c.title = v || c.title || "新对话";
+    c.named = !!v;
+    saveConvos();
+    renderConvoList(document.getElementById("convoSearch").value);
+  }
+  closeModal("renameModal");
+});
+
+/* 排序：置顶的在前（按置顶时间倒序），其余按创建时间倒序 */
+function sortedConvos(){
+  return conversations.slice().sort((a,b)=>{
+    const ap = a.pinned||0, bp = b.pinned||0;
+    if(ap && bp) return bp - ap;
+    if(ap) return -1;
+    if(bp) return 1;
+    return (b.createdAt||0) - (a.createdAt||0);
+  });
+}
+
+/* ---------- 对话长按菜单 ---------- */
+let menuConvoId = null;
+function openConvoMenu(id){
+  const c = conversations.find(x=>x.id===id);
+  if(!c) return;
+  menuConvoId = id;
+  document.getElementById("convoMenuTitle").textContent = c.title || "对话操作";
+  document.getElementById("cmPinText").textContent = c.pinned ? "取消置顶" : "置顶";
+  document.getElementById("cmFavText").textContent = c.favorite ? "取消收藏" : "收藏此对话";
+  openModal("convoMenuModal");
+}
+document.getElementById("convoMenuClose").addEventListener("click",()=>closeModal("convoMenuModal"));
+document.getElementById("convoMenuModal").addEventListener("click",e=>{
+  if(e.target.id==="convoMenuModal") closeModal("convoMenuModal");
+});
+document.getElementById("cmPin").addEventListener("click",()=>{
+  const c = conversations.find(x=>x.id===menuConvoId);
+  if(c){ c.pinned = c.pinned ? 0 : Date.now(); saveConvos();
+    renderConvoList(document.getElementById("convoSearch").value); }
+  closeModal("convoMenuModal");
+});
+document.getElementById("cmRename").addEventListener("click",()=>{
+  closeModal("convoMenuModal");
+  setTimeout(()=>openRename(menuConvoId), 200);
+});
+document.getElementById("cmFav").addEventListener("click",()=>{
+  const c = conversations.find(x=>x.id===menuConvoId);
+  if(c){ c.favorite = c.favorite ? 0 : Date.now(); saveConvos();
+    renderConvoList(document.getElementById("convoSearch").value); }
+  closeModal("convoMenuModal");
+});
+
+/* 列表渲染，支持关键词过滤 */
+function renderConvoList(keyword){
+  const box = document.getElementById("convoList");
+  box.innerHTML = "";
+  const kw = (keyword||"").trim().toLowerCase();
+  let list = sortedConvos();
+  if(kw){
+    list = list.filter(c=>{
+      if((c.title||"").toLowerCase().includes(kw)) return true;
+      return c.log.some(m=>{
+        const t = (typeof m.content==="string") ? m.content : (m.content&&m.content.text||"");
+        return t.toLowerCase().includes(kw);
+      });
+    });
+  }
+  if(list.length===0){
+    box.innerHTML = '<div class="ci-empty">'
+      + (kw ? "没有匹配的对话" : "还没有对话") + '</div>';
+    return;
+  }
+  list.forEach(c=>{
+    const div = document.createElement("div");
+    div.className = "convo-item" + (c.id===currentId ? " on" : "");
+    // 置顶绿点
+    if(c.pinned){
+      const dot = document.createElement("span");
+      dot.className = "ci-pin";
+      div.appendChild(dot);
+    }
+    const main = document.createElement("div");
+    main.className = "ci-main";
+    const t = document.createElement("div");
+    t.className = "ci-title";
+    t.textContent = c.title || "新对话";
+    const meta = document.createElement("div");
+    meta.className = "ci-meta";
+    const n = c.log.filter(m=>m.role==="user").length;
+    meta.textContent = `${n} 个提问 · ${fmtDate(c.createdAt)}`;
+    main.appendChild(t); main.appendChild(meta);
+    main.addEventListener("click",()=>{
+      if(suppressClick){ suppressClick=false; return; }
+      switchConvo(c.id);
+    });
+    div.appendChild(main);
+    // 收藏星标
+    if(c.favorite){
+      const star = document.createElement("span");
+      star.className = "ci-star";
+      star.textContent = "★";
+      div.appendChild(star);
+    }
+    // 末尾删除图标
+    const del = document.createElement("button");
+    del.className = "ci-act";
+    del.textContent = "🗑";
+    del.title = "删除";
+    del.addEventListener("click",(e)=>{ e.stopPropagation(); deleteConvo(c.id); });
+    div.appendChild(del);
+    // 长按 / 右键 唤出菜单
+    attachLongPress(div, ()=>openConvoMenu(c.id));
+    box.appendChild(div);
+  });
+}
+
+/* 长按检测：移动端 0.5s 长按，桌面端右键 */
+let suppressClick = false;
+function attachLongPress(el, handler){
+  let timer = null;
+  const start = ()=>{
+    timer = setTimeout(()=>{ suppressClick = true; handler(); }, 400);
+  };
+  const cancel = ()=>{ if(timer){ clearTimeout(timer); timer=null; } };
+  el.addEventListener("touchstart", start, {passive:true});
+  el.addEventListener("touchend", cancel);
+  el.addEventListener("touchmove", cancel);
+  el.addEventListener("contextmenu",(e)=>{ e.preventDefault(); handler(); });
+}
+
+document.getElementById("convoListBtn").addEventListener("click", openDrawer);
+document.getElementById("newChatBtn").addEventListener("click", newConversation);
+document.getElementById("drawerBg").addEventListener("click", closeDrawer);
+document.getElementById("convoSearch").addEventListener("input",e=>{
+  renderConvoList(e.target.value);
+});
+
+/* ---------- 回复倾向 ---------- */
+function buildPersonaPresets(){
+  const box = document.getElementById("personaPresets");
+  box.innerHTML = "";
+  PERSONA_PRESETS.forEach(text=>{
+    const b = document.createElement("button");
+    b.textContent = text.length>14 ? text.slice(0,14)+"…" : text;
+    b.title = text;
+    b.addEventListener("click",()=>{
+      document.getElementById("personaText").value = text;
+    });
+    box.appendChild(b);
+  });
+}
+function openPersonaModal(){
+  const convo = curConvo();
+  document.getElementById("personaText").value = convo ? (convo.persona||"") : "";
+  openModal("personaModal");
+}
+document.getElementById("personaBtn").addEventListener("click", openPersonaModal);
+document.getElementById("personaCancel").addEventListener("click",()=>closeModal("personaModal"));
+document.getElementById("personaModal").addEventListener("click",e=>{
+  if(e.target.id==="personaModal") closeModal("personaModal");
+});
+document.getElementById("personaSave").addEventListener("click",()=>{
+  const convo = curConvo();
+  if(convo){
+    convo.persona = document.getElementById("personaText").value;
+    saveConvos();
+  }
+  closeModal("personaModal");
+});
+
+/* ---------- 模型切换（当前对话） ---------- */
+function renderModelPicker(){
+  const box = document.getElementById("modelPickList");
+  box.innerHTML = "";
+  const convo = curConvo();
+  const cur = convo ? convo.provider : settings.provider;
+  PROV_KEYS.forEach(pk=>{
+    const prov = PROVIDERS[pk];
+    const hasKey = !!settings.keys[pk];
+    const div = document.createElement("div");
+    div.className = "model-pick" + (pk===cur ? " on" : "");
+    const main = document.createElement("div");
+    main.className = "mp-main";
+    const name = document.createElement("div");
+    name.className = "mp-name";
+    name.textContent = prov.label;
+    const meta = document.createElement("div");
+    meta.className = "mp-meta";
+    meta.textContent = settings.models[pk] || prov.model || "（未指定模型）";
+    main.appendChild(name); main.appendChild(meta);
+    const state = document.createElement("div");
+    state.className = "mp-state " + (hasKey ? "ready" : "empty");
+    state.textContent = hasKey ? (pk===cur ? "使用中" : "可用") : "未配置";
+    div.appendChild(main); div.appendChild(state);
+    div.addEventListener("click",()=>{
+      if(!hasKey){
+        // 未配密钥：跳到设置页
+        closeModal("modelModal");
+        settings.provider = pk;
+        renderSettings();
+        document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+        document.querySelector('nav button[data-v="set"]').classList.add("on");
+        document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+        document.getElementById("view-set").classList.add("active");
+        return;
+      }
+      if(convo){
+        convo.provider = pk;
+        saveConvos();
+        refreshStatus();
+      }
+      closeModal("modelModal");
+    });
+    box.appendChild(div);
+  });
+}
+document.getElementById("modelBtn").addEventListener("click",()=>{
+  renderModelPicker();
+  openModal("modelModal");
+});
+document.getElementById("modelModal").addEventListener("click",e=>{
+  if(e.target.id==="modelModal") closeModal("modelModal");
+});
+
+/* ---------- 图片附件 ---------- */
+const MAX_IMG_DIM = 1400;          // 超过则等比缩小，控制体积
+const MAX_IMGS = 4;
+const MAX_PDF_SIZE = 20 * 1024 * 1024;   // PDF 上限 20MB
+
+/* 动态加载 pdf.js（只在第一次传 PDF 时加载，不拖慢启动） */
+let _pdfjsLoading = null;
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(_pdfjsLoading) return _pdfjsLoading;
+  _pdfjsLoading = new Promise((resolve,reject)=>{
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload = ()=>{
+      if(window.pdfjsLib){
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        resolve(window.pdfjsLib);
+      }else reject(new Error("pdf.js 加载异常"));
+    };
+    s.onerror = ()=>reject(new Error("无法加载 PDF 解析库，请检查网络"));
+    document.head.appendChild(s);
+  });
+  return _pdfjsLoading;
+}
+
+/* 从 PDF 提取文字。返回 {text, kind}
+   kind: 'text'=正常文字版  'scanned'=扫描版无文字  'partial'=文字很少疑似混排 */
+async function extractPdfText(arrayBuffer){
+  const pdfjsLib = await loadPdfJs();
+  const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  let allText = "";
+  const pageCount = Math.min(pdf.numPages, 60);   // 最多取 60 页
+  for(let i=1;i<=pageCount;i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    // 按 y 坐标分行，合并同一行的文字片段
+    const items = content.items;
+    let pageText = "";
+    let lastY = null;
+    items.forEach(it=>{
+      const y = it.transform[5];
+      if(lastY!==null && Math.abs(y-lastY)>3){ pageText += "\n"; }
+      pageText += it.str;
+      lastY = y;
+    });
+    allText += pageText + "\n\n";
+  }
+  const clean = allText.replace(/\n{3,}/g,"\n\n").trim();
+  // 判断质量
+  if(clean.length < 20){
+    return { text:"", kind:"scanned" };
+  }
+  // 文字过少（相对页数）疑似扫描混排
+  if(clean.length < pageCount * 80){
+    return { text:clean, kind:"partial" };
+  }
+  return { text:clean, kind:"text" };
+}
+
+function renderPendingImgs(){
+  const box = document.getElementById("pendingImgs");
+  box.innerHTML = "";
+  if(pendingImages.length===0){ box.classList.remove("show"); return; }
+  box.classList.add("show");
+  pendingImages.forEach((im,i)=>{
+    const d = document.createElement("div");
+    d.className = "pend-img";
+    const img = document.createElement("img");
+    img.src = im.dataUrl;
+    const rm = document.createElement("button");
+    rm.className = "rm"; rm.textContent = "×";
+    rm.addEventListener("click",()=>{
+      pendingImages.splice(i,1);
+      renderPendingImgs();
+    });
+    d.appendChild(img); d.appendChild(rm);
+    box.appendChild(d);
+  });
+}
+
+// 读取并压缩一张图片，返回 {dataUrl, mediaType, data}
+function processImage(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let { width:w, height:h } = img;
+        const scale = Math.min(1, MAX_IMG_DIM/Math.max(w,h));
+        w = Math.round(w*scale); h = Math.round(h*scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img,0,0,w,h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({
+          dataUrl,
+          mediaType: "image/jpeg",
+          data: dataUrl.split(",")[1]
+        });
+      };
+      img.onerror = ()=>reject(new Error("图片读取失败"));
+      img.src = reader.result;
+    };
+    reader.onerror = ()=>reject(new Error("文件读取失败"));
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById("attachBtn").addEventListener("click",()=>{
+  document.getElementById("fileInput").click();
+});
+document.getElementById("fileInput").addEventListener("change", async (e)=>{
+  const files = [...e.target.files];
+  const convo = curConvo();
+  for(const f of files){
+    if(f.type.startsWith("image/")){
+      if(pendingImages.length>=MAX_IMGS){
+        alert("一次最多添加 " + MAX_IMGS + " 张图片");
+        continue;
+      }
+      try{ pendingImages.push(await processImage(f)); }catch(err){}
+    }else if(f.type==="application/pdf"){
+      if(!convo){ continue; }
+      if(f.size > MAX_PDF_SIZE){
+        alert("PDF「"+f.name+"」超过 20MB，无法添加");
+        continue;
+      }
+      if((convo.pdfs||[]).length>=5){
+        alert("一个对话最多保留 5 个 PDF，请先在 PDF 列表里删掉一些");
+        continue;
+      }
+      await addConvoPdf(convo, f);
+    }
+  }
+  renderPendingImgs();
+  renderConvoPdfBar();
+  e.target.value = "";
+});
+
+/* 处理一个 PDF：读成 base64、提取文字，存进对话的 pdfs 列表 */
+async function addConvoPdf(convo, file){
+  // 显示一个"解析中"占位
+  const id = "p"+Date.now()+Math.random().toString(36).slice(2,5);
+  const entry = { id, name:file.name, data:"", text:"", kind:"loading" };
+  if(!convo.pdfs) convo.pdfs = [];
+  convo.pdfs.push(entry);
+  renderConvoPdfBar();
+  try{
+    const buf = await file.arrayBuffer();
+    let binary = "";
+    const bytes = new Uint8Array(buf);
+    for(let i=0;i<bytes.length;i++) binary += String.fromCharCode(bytes[i]);
+    entry.data = btoa(binary);
+    try{
+      const r = await extractPdfText(buf.slice(0));
+      entry.text = r.text;
+      entry.kind = r.kind;
+    }catch(err){
+      entry.kind = "fail";
+      entry.extractError = err.message;
+    }
+  }catch(err){
+    entry.kind = "fail";
+    entry.extractError = "文件读取失败";
+  }
+  saveConvos();
+  renderConvoPdfBar();
+}
+
+/* 刷新输入栏的 PDF 按钮：有 PDF 才显示，并显示数量 */
+function renderConvoPdfBar(){
+  const btn = document.getElementById("pdfBtn");
+  const convo = curConvo();
+  const n = (convo && convo.pdfs) ? convo.pdfs.length : 0;
+  if(n>0){
+    btn.style.display = "flex";
+    document.getElementById("pdfBtnCount").textContent = n;
+  }else{
+    btn.style.display = "none";
+  }
+}
+function pdfKindLabel(kind){
+  if(kind==="loading") return ["解析中…", false];
+  if(kind==="text") return ["可提取文字", false];
+  if(kind==="partial") return ["文字较少，可能不全", true];
+  if(kind==="scanned") return ["扫描版（无文字层）", true];
+  return ["解析失败", true];
+}
+/* 打开本对话 PDF 列表 */
+function openPdfList(){
+  const convo = curConvo();
+  if(!convo) return;
+  const box = document.getElementById("pdfListBox");
+  box.innerHTML = "";
+  if(!convo.pdfs || convo.pdfs.length===0){
+    box.innerHTML = '<div class="pdf-empty">本对话还没有 PDF</div>';
+  }else{
+    convo.pdfs.forEach(pf=>{
+      const row = document.createElement("div");
+      row.className = "pdf-row";
+      const icon = document.createElement("div");
+      icon.className = "pr-icon"; icon.textContent = "PDF";
+      const info = document.createElement("div");
+      info.className = "pr-info";
+      const name = document.createElement("div");
+      name.className = "pr-name"; name.textContent = pf.name;
+      const state = document.createElement("div");
+      const lab = pdfKindLabel(pf.kind);
+      state.className = "pr-state" + (lab[1]?" warn":"");
+      state.textContent = lab[0];
+      info.appendChild(name); info.appendChild(state);
+      const del = document.createElement("button");
+      del.className = "pr-del"; del.textContent = "删除";
+      del.addEventListener("click",()=>{
+        convo.pdfs = convo.pdfs.filter(x=>x.id!==pf.id);
+        saveConvos();
+        openPdfList();
+        renderConvoPdfBar();
+      });
+      row.appendChild(icon); row.appendChild(info); row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+  openModal("pdfListModal");
+}
+document.getElementById("pdfBtn").addEventListener("click", openPdfList);
+document.getElementById("pdfListClose").addEventListener("click",()=>closeModal("pdfListModal"));
+document.getElementById("pdfListModal").addEventListener("click",e=>{
+  if(e.target.id==="pdfListModal") closeModal("pdfListModal");
+});
+
+/* ---------- 对话压缩摘要 ---------- */
+function maybeOfferCompress(convo){
+  if(convo.compressedAt && convo.log.length - convo.compressedAt < COMPRESS_TURNS) return;
+  const turns = convo.log.filter(m=>m.role==="user").length;
+  const chars = convoCharCount(convo);
+  if(chars < COMPRESS_CHARS && turns < COMPRESS_TURNS) return;
+  if(convo._compressAsked) return;          // 本次会话只问一次，避免反复打扰
+  convo._compressAsked = true;
+  setTimeout(()=>{
+    if(confirm("这个对话已经比较长了。\n是否把较早的内容压缩成一段摘要？\n\n好处：之后回答更快、更省。原始记录会保留备份。")){
+      compressConvo(convo);
+    }
+  }, 400);
+}
+
+async function compressConvo(convo){
+  if(busy) return;
+  // 保留最近 6 条原始消息，之前的拿去摘要
+  const keepFrom = Math.max(0, convo.log.length - 6);
+  const toSummarize = convo.log.slice(0, keepFrom);
+  if(toSummarize.length < 2) return;
+
+  setBusy(true);
+  addTyping();
+  const plain = toSummarize.map(m=>
+    (m.role==="user" ? "【提问】" : "【回答】") + msgText(m.content)
+  ).join("\n\n");
+  const sys = "你是一个对话摘要助手。请把下面的医学问答对话压缩成一段简洁、信息完整的摘要，"
+    + "保留关键的临床结论、诊断要点和已达成的共识，供后续对话作为上下文。只输出摘要本身。";
+  abortCtrl = new AbortController();
+  try{
+    const summary = await callModel(sys,
+      [{role:"user", content:plain}], null, convo.provider, abortCtrl.signal);
+    removeTyping();
+    // 原始记录备份
+    convo.archived = (convo.archived||[]).concat(toSummarize);
+    // 用一条摘要消息替换被压缩的部分
+    convo.log = [
+      { role:"user", content:"（以下为之前对话的摘要）" },
+      { role:"bot", content:summary, summary:true }
+    ].concat(convo.log.slice(keepFrom));
+    convo.compressedAt = 2;
+    convo._compressAsked = false;
+    saveConvos();
+    renderHistory();
+  }catch(err){
+    removeTyping();
+    if(err.name!=="AbortError"){
+      addMsg("err","压缩失败：" + err.message, null, -1);
+    }
+  }finally{
+    abortCtrl = null;
+    setBusy(false);
+  }
+}
+
+/* ---------- 数据备份：导出 / 导入 ---------- */
+function setBackupHint(text, warn){
+  const h = document.getElementById("backupHint");
+  h.textContent = text || "";
+  h.style.color = warn ? "var(--warn)" : "var(--muted)";
+}
+document.getElementById("exportBtn").addEventListener("click",()=>{
+  try{
+    const dump = {
+      _app: "neuro-kb",
+      _version: 6,
+      _exportedAt: new Date().toISOString(),
+      settings, knowledge, tags, conversations, currentId
+    };
+    const blob = new Blob([JSON.stringify(dump,null,2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = "神内知识库备份-" + stamp + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    setBackupHint("已导出备份文件，请妥善保存。");
+  }catch(err){
+    setBackupHint("导出失败：" + err.message, true);
+  }
+});
+document.getElementById("importBtn").addEventListener("click",()=>{
+  document.getElementById("importFile").click();
+});
+document.getElementById("importFile").addEventListener("change",(e)=>{
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ()=>{
+    let dump;
+    try{ dump = JSON.parse(reader.result); }
+    catch(err){ setBackupHint("文件无法解析，可能不是有效的备份文件。", true); return; }
+    if(!dump || dump._app!=="neuro-kb"){
+      setBackupHint("这不是本应用的备份文件。", true); return;
+    }
+    if(!confirm("导入备份会覆盖当前所有对话、知识库和设置，确定继续？")) return;
+    try{
+      if(dump.settings) settings = dump.settings;
+      if(Array.isArray(dump.knowledge)){
+        // 兼容旧备份：条目可能没有 tags/时间戳字段
+        knowledge = dump.knowledge.map(e=>({
+          id: e.id || ("k"+Date.now()+Math.random().toString(36).slice(2,5)),
+          title: e.title||"", content: e.content||"",
+          tags: e.tags||[],
+          createdAt: e.createdAt||Date.now(),
+          updatedAt: e.updatedAt||Date.now()
+        }));
+      }
+      tags = Array.isArray(dump.tags) ? dump.tags : [];
+      if(Array.isArray(dump.conversations)) conversations = dump.conversations;
+      if(dump.currentId) currentId = dump.currentId;
+      if(!settings.userName) settings.userName = "我";
+      if(!settings.botName) settings.botName = "助手";
+      if(!settings.appName) settings.appName = "神经内科知识库";
+      conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider||"claude"; if(!c.pinned) c.pinned = 0; if(!c.favorite) c.favorite = 0; if(!c.pdfs) c.pdfs = []; });
+      if(conversations.length===0) conversations.push(newConvoObj());
+      if(!curConvo()) currentId = conversations[0].id;
+      await Store.set("nkb_settings", JSON.stringify(settings));
+      await KBStore.saveEntries(knowledge);
+      await KBStore.saveTags(tags);
+      await saveConvos();
+      // 重置筛选状态
+      kbFilterTagIds = []; kbSearchKw = "";
+      document.getElementById("kbSearch").value = "";
+      buildProvGrid(); renderSettings(); renderKb();
+      refreshStatus(); applyAppName(); renderHistory();
+      renderConvoPdfBar();
+      setBackupHint("✓ 导入成功，数据已恢复。");
+    }catch(err){
+      setBackupHint("导入过程出错：" + err.message, true);
+    }
+  };
+  reader.onerror = ()=>setBackupHint("文件读取失败。", true);
+  reader.readAsText(file);
+});
+
+/* ---------- 收藏夹 ---------- */
+let favTab = "convo";
+function openFav(){
+  favTab = "convo";
+  document.querySelectorAll(".fav-tab").forEach(t=>{
+    t.classList.toggle("on", t.dataset.ft==="convo");
+  });
+  renderFav();
+  openModal("favModal");
+}
+function renderFav(){
+  const box = document.getElementById("favList");
+  box.innerHTML = "";
+  if(favTab==="convo"){
+    const favs = conversations.filter(c=>c.favorite)
+      .sort((a,b)=>b.favorite-a.favorite);
+    if(favs.length===0){
+      box.innerHTML = '<div class="fav-empty">还没有收藏的对话。<br>'
+        + '在侧栏长按对话 → 收藏。</div>';
+      return;
+    }
+    favs.forEach(c=>{
+      const div = document.createElement("div");
+      div.className = "fav-entry";
+      const title = document.createElement("div");
+      title.className = "fe-title";
+      title.textContent = c.title || "新对话";
+      const txt = document.createElement("div");
+      txt.className = "fe-text";
+      const firstUser = c.log.find(m=>m.role==="user");
+      txt.textContent = firstUser ? msgText(firstUser.content) : "（空对话）";
+      const meta = document.createElement("div");
+      meta.className = "fe-meta";
+      const open = document.createElement("span");
+      open.textContent = "打开对话 →";
+      const unfav = document.createElement("button");
+      unfav.textContent = "取消收藏";
+      unfav.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        c.favorite = 0; saveConvos(); renderFav();
+      });
+      meta.appendChild(open); meta.appendChild(unfav);
+      div.appendChild(title); div.appendChild(txt); div.appendChild(meta);
+      div.addEventListener("click",()=>{
+        closeModal("favModal");
+        switchConvo(c.id);
+      });
+      box.appendChild(div);
+    });
+  }else{
+    // 收藏的回复：遍历所有对话的 log
+    const items = [];
+    conversations.forEach(c=>{
+      c.log.forEach((m,idx)=>{
+        if(m.favorite){
+          items.push({ convo:c, msg:m, idx, ts:m.favorite });
+        }
+      });
+    });
+    items.sort((a,b)=>b.ts-a.ts);
+    if(items.length===0){
+      box.innerHTML = '<div class="fav-empty">还没有收藏的回复。<br>'
+        + '在某条回复下点 ☆ 收藏。</div>';
+      return;
+    }
+    items.forEach(it=>{
+      const div = document.createElement("div");
+      div.className = "fav-entry";
+      const title = document.createElement("div");
+      title.className = "fe-title";
+      title.textContent = (it.msg.role==="user" ? "我的提问" : "回复")
+        + " · " + (it.convo.title||"对话");
+      const txt = document.createElement("div");
+      txt.className = "fe-text";
+      txt.textContent = msgText(activeContent(it.msg));
+      const meta = document.createElement("div");
+      meta.className = "fe-meta";
+      const open = document.createElement("span");
+      open.textContent = "打开对话 →";
+      const unfav = document.createElement("button");
+      unfav.textContent = "取消收藏";
+      unfav.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        it.msg.favorite = 0; saveConvos(); renderFav();
+      });
+      meta.appendChild(open); meta.appendChild(unfav);
+      div.appendChild(title); div.appendChild(txt); div.appendChild(meta);
+      div.addEventListener("click",()=>{
+        closeModal("favModal");
+        switchConvo(it.convo.id);
+      });
+      box.appendChild(div);
+    });
+  }
+}
+document.getElementById("favBtn").addEventListener("click", openFav);
+document.getElementById("favClose").addEventListener("click",()=>closeModal("favModal"));
+document.getElementById("favModal").addEventListener("click",e=>{
+  if(e.target.id==="favModal") closeModal("favModal");
+});
+document.querySelectorAll(".fav-tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    favTab = tab.dataset.ft;
+    document.querySelectorAll(".fav-tab").forEach(t=>t.classList.remove("on"));
+    tab.classList.add("on");
+    renderFav();
+  });
+});
+
+/* ---------- PWA：内联 manifest，保持单文件分发 ---------- */
+(function setupPWA(){
+  const ICON = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMGM1YjVlIi8+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjNlZmU2IiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGNpcmNsZSBjeD0iOTAiIGN5PSI1OCIgcj0iMTYiLz48Y2lyY2xlIGN4PSI1NCIgY3k9IjEwNCIgcj0iMTQiLz48Y2lyY2xlIGN4PSIxMjYiIGN5PSIxMDQiIHI9IjE0Ii8+PGNpcmNsZSBjeD0iOTAiIGN5PSIxNDAiIHI9IjEzIi8+PHBhdGggZD0iTTkwIDc0djI2TTc4IDY4IDY0IDkyTTEwMiA2OCAxMTYgOTJNNjYgMTE2bDIwIDE4TTExNCAxMTYgOTQgMTM0Ii8+PC9nPjwvc3ZnPg==";
+  const pageUrl = location.href.split("#")[0].split("?")[0];
+  const dirUrl  = pageUrl.slice(0, pageUrl.lastIndexOf("/") + 1);
+  const manifest = {
+    name: "神经内科知识库",
+    short_name: "神内知识库",
+    description: "个人神经内科查询助手",
+    start_url: pageUrl,
+    scope: dirUrl,
+    display: "standalone",
+    orientation: "portrait",
+    background_color: "#f3efe6",
+    theme_color: "#f6f5f2",
+    icons: [
+      { src: ICON, sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: ICON, sizes: "any", type: "image/svg+xml", purpose: "maskable" }
+    ]
+  };
+  try{
+    const dataUri = "data:application/manifest+json," +
+                    encodeURIComponent(JSON.stringify(manifest));
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = dataUri;
+    document.head.appendChild(link);
+  }catch(e){}
+})();
+
+init();
+</script>
+</body>
+</html>
