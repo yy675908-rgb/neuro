@@ -52,9 +52,11 @@
     font-size:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;
     transition:background .18s var(--ease),transform .12s var(--ease);}
   .icon-btn:active{background:var(--line);transform:scale(.92);}
-  #modelBtn{flex-shrink:1;min-width:0;display:flex;align-items:center;gap:5px;
-    background:var(--card);border:none;box-shadow:var(--shadow);border-radius:11px;
-    padding:0 13px;height:38px;font-family:var(--sans);font-size:13px;
+  /* 左上角对话列表按钮：比普通图标按钮大一些，更好点 */
+  #convoListBtn{width:44px;height:44px;font-size:25px;margin-right:6px;}
+  #modelBtn{flex-shrink:1;min-width:0;display:flex;align-items:center;gap:4px;
+    background:var(--card);border:none;box-shadow:var(--shadow);border-radius:10px;
+    padding:0 10px;height:33px;font-family:var(--sans);font-size:12px;
     color:var(--ink);cursor:pointer;
     transition:transform .12s var(--ease);}
   #modelBtn:active{transform:scale(.97);}
