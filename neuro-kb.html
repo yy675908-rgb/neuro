@@ -177,12 +177,15 @@
 
 
   .kb-wrap{padding:calc(env(safe-area-inset-top) + 18px) 16px 90px;}
-  .kb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
-  .kb-top .count{font-size:13px;color:var(--muted);}
+  .kb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px;}
+  .kb-top .count{font-size:13px;color:var(--muted);flex-shrink:0;}
+  .kb-top-btns{display:flex;gap:7px;}
   .add-btn{border:none;background:var(--accent);color:#fff;border-radius:12px;
-    padding:9px 15px;font-family:var(--sans);font-size:13.5px;font-weight:600;cursor:pointer;
-    transition:transform .12s var(--ease);}
+    padding:9px 13px;font-family:var(--sans);font-size:12.5px;font-weight:600;cursor:pointer;
+    white-space:nowrap;transition:transform .12s var(--ease);}
   .add-btn:active{transform:scale(.96);}
+  /* 次要按钮：白底描边风格 */
+  .add-btn.ghost{background:var(--card);color:var(--accent);box-shadow:var(--shadow);}
   .kb-item{background:var(--card);box-shadow:var(--shadow);border-radius:15px;
     padding:14px 16px;margin-bottom:11px;animation:rise .3s var(--ease);}
   .kb-item h3{font-family:var(--serif);font-weight:500;font-size:16.5px;margin-bottom:3px;}
@@ -459,8 +462,12 @@
     <div class="kb-wrap">
       <div class="kb-top">
         <span class="count" id="kbCount">共 0 条</span>
-        <button class="add-btn" id="addKbBtn">＋ 新增条目</button>
+        <div class="kb-top-btns">
+          <button class="add-btn ghost" id="kbUploadBtn">⬆ 上传 PDF</button>
+          <button class="add-btn" id="addKbBtn">＋ 新增条目</button>
+        </div>
       </div>
+      <input type="file" id="kbFileInput" accept="application/pdf" style="display:none;">
       <input type="text" id="kbSearch" class="kb-search" placeholder="搜索标题、内容或标签…">
       <div id="kbFilterTags" class="kb-filter-tags"></div>
       <div id="kbList"></div>
@@ -674,7 +681,7 @@
 <div class="modal-bg" id="pdfListModal">
   <div class="modal">
     <h2>本对话的 PDF</h2>
-    <div class="desc" style="margin-bottom:10px;">这些 PDF 会在每次提问时一并发给模型作参考。点 PDF 名可查看原文，不需要的可删掉。</div>
+    <div class="desc" style="margin-bottom:10px;">本次对话 AI 可持续参考下列 PDF。点名称查看原文。</div>
     <div id="pdfListBox"></div>
     <div class="modal-acts" style="margin-top:10px;">
       <button class="btn-cancel" id="pdfListClose">关闭</button>
@@ -1317,6 +1324,51 @@ document.getElementById("addKbBtn").addEventListener("click",()=>openKbModal(nul
 document.getElementById("kbCancel").addEventListener("click",()=>closeModal("kbModal"));
 document.getElementById("kbModal").addEventListener("click",e=>{
   if(e.target.id==="kbModal") closeModal("kbModal");
+});
+
+/* 知识库上传 PDF：提取文字 → 预填新增条目弹窗；失败则提示原因 */
+document.getElementById("kbUploadBtn").addEventListener("click",()=>{
+  document.getElementById("kbFileInput").click();
+});
+document.getElementById("kbFileInput").addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+  if(file.type!=="application/pdf"){
+    alert("请选择 PDF 文件"); return;
+  }
+  if(file.size > MAX_PDF_SIZE){
+    alert("PDF 超过 20MB，无法处理"); return;
+  }
+  const btn = document.getElementById("kbUploadBtn");
+  const oldText = btn.textContent;
+  btn.textContent = "解析中…"; btn.disabled = true;
+  try{
+    const buf = await file.arrayBuffer();
+    const r = await extractPdfText(buf);
+    if(r.kind==="scanned"){
+      alert("「"+file.name+"」为扫描版（无文字层），无法提取文字。\n"
+        + "扫描件请改用聊天页上传，并用 Claude / GPT / Gemini 直接读取。");
+      return;
+    }
+    if(!r.text || r.text.trim().length<10){
+      alert("「"+file.name+"」未能提取到有效文字，可能是扫描版或空文档。");
+      return;
+    }
+    // 打开新增条目弹窗，预填内容
+    openKbModal(null);
+    const nameNoExt = file.name.replace(/\.pdf$/i,"");
+    document.getElementById("kbTitle").value = nameNoExt;
+    document.getElementById("kbContent").value = r.text;
+    if(r.kind==="partial"){
+      alert("已提取「"+file.name+"」的文字，但内容偏少或排版可能错乱（常见于双栏、表格、扫描混排）。\n"
+        + "请在保存前检查下方内容是否完整准确。");
+    }
+  }catch(err){
+    alert("解析 PDF 失败：" + (err.message||"未知错误"));
+  }finally{
+    btn.textContent = oldText; btn.disabled = false;
+  }
 });
 
 /* 添加新标签 */
@@ -2140,10 +2192,13 @@ async function send(){
     if(textBased){
       const bad = convo.pdfs.filter(p=>p.kind==="scanned"||p.kind==="fail");
       if(bad.length){
-        addMsg("err","本对话里有扫描版或无法解析的 PDF（" + bad.map(p=>p.name).join("、")
-          + "）。「" + PROVIDERS[pk].label + "」只能处理文字，读不了这类 PDF。\n"
-          + "请点顶栏模型按钮换成 Claude、GPT 或 Gemini —— 它们能直接读 PDF 原文件；"
-          + "或在 PDF 列表里删掉这些扫描件。", null, -1);
+        const lines = bad.map(p=>{
+          const reason = p.kind==="scanned" ? "扫描版（无文字层）" : "解析失败";
+          return "「" + p.name + "」为" + reason + "。";
+        });
+        addMsg("err", lines.join("\n") + "\n"
+          + PROVIDERS[pk].label + " 只能处理文字，请切换 Claude / GPT / Gemini 直接读取。",
+          null, -1);
         return;
       }
     }
