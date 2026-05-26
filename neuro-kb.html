@@ -672,7 +672,7 @@
 <div class="modal-bg" id="pdfListModal">
   <div class="modal">
     <h2>本对话的 PDF</h2>
-    <div class="desc" style="margin-bottom:10px;">这些 PDF 会在每次提问时一并发给模型作参考。不需要的可以删掉。</div>
+    <div class="desc" style="margin-bottom:10px;">这些 PDF 会在每次提问时一并发给模型作参考。点 PDF 名可查看原文，不需要的可删掉。</div>
     <div id="pdfListBox"></div>
     <div class="modal-acts" style="margin-top:10px;">
       <button class="btn-cancel" id="pdfListClose">关闭</button>
@@ -1439,7 +1439,7 @@ function retrieve(query){
     }
   });
   const qTokens = [...expanded];
-  if(qTokens.length===0) return knowledge.slice(0, Math.min(5,knowledge.length));
+  if(qTokens.length===0) return [];   // 查询无有效词，不带知识库
 
   const scored = knowledge.map(e=>{
     const title = (e.title||"").toLowerCase();
@@ -1459,11 +1459,8 @@ function retrieve(query){
   });
   scored.sort((a,b)=>b.score-a.score);
   const hit = scored.filter(x=>x.score>0).slice(0,5).map(x=>x.e);
-  // 完全没命中：条目少就全给，条目多则给最近更新的几条兜底
-  if(hit.length===0){
-    if(knowledge.length<=5) return knowledge.slice();
-    return knowledge.slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,3);
-  }
+  // 没有命中任何条目就返回空——不再硬塞无关条目
+  // （提问里没有与知识库相关的词时，不带知识库内容，避免"请假单配偏头痛"这类误匹配）
   return hit;
 }
 
@@ -2666,6 +2663,22 @@ function pdfKindLabel(kind){
   return ["解析失败", true];
 }
 /* 打开本对话 PDF 列表 */
+/* 在新标签打开一个 PDF（用存储的 base64 还原成文件） */
+function openPdfFile(pf){
+  if(!pf.data){ alert("这个 PDF 还在解析中，请稍候"); return; }
+  try{
+    const bin = atob(pf.data);
+    const bytes = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], {type:"application/pdf"});
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  }catch(e){
+    alert("无法打开此 PDF");
+  }
+}
+
 function openPdfList(){
   const convo = curConvo();
   if(!convo) return;
@@ -2688,9 +2701,16 @@ function openPdfList(){
       state.className = "pr-state" + (lab[1]?" warn":"");
       state.textContent = lab[0];
       info.appendChild(name); info.appendChild(state);
+      // 点图标或信息区 = 打开这个 PDF
+      const openIt = ()=>openPdfFile(pf);
+      icon.addEventListener("click", openIt);
+      info.addEventListener("click", openIt);
+      icon.style.cursor = "pointer";
+      info.style.cursor = "pointer";
       const del = document.createElement("button");
       del.className = "pr-del"; del.textContent = "删除";
-      del.addEventListener("click",()=>{
+      del.addEventListener("click",(ev)=>{
+        ev.stopPropagation();
         convo.pdfs = convo.pdfs.filter(x=>x.id!==pf.id);
         saveConvos();
         openPdfList();
