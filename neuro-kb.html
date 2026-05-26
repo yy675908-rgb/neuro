@@ -1122,18 +1122,35 @@ function renderKbFilter(){
 }
 
 /* 过滤后的条目列表 */
+/* 把搜索关键词扩展成一组等价词（含同义词），用于知识库搜索框 */
+function expandSearchWords(kw){
+  const w = kw.trim().toLowerCase();
+  if(!w) return [];
+  const out = new Set([w]);
+  SYNONYM_GROUPS.forEach(group=>{
+    // 关键词与组内任一词互相包含，则整组都算等价
+    if(group.some(g=>w.includes(g) || g.includes(w))){
+      group.forEach(g=>out.add(g));
+    }
+  });
+  return [...out];
+}
+
 function filteredKb(){
   let list = knowledge.slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   const kw = kbSearchKw.trim().toLowerCase();
   if(kw){
+    // 关键词扩展同义词：搜"头疼"也能找到"偏头痛"
+    const words = expandSearchWords(kw);
     list = list.filter(e=>{
-      if((e.title||"").toLowerCase().includes(kw)) return true;
-      if((e.content||"").toLowerCase().includes(kw)) return true;
-      // 也搜标签名：条目的标签里有名字匹配的
-      return (e.tags||[]).some(tid=>{
-        const t = tagById(tid);
-        return t && t.name.toLowerCase().includes(kw);
-      });
+      const title = (e.title||"").toLowerCase();
+      const content = (e.content||"").toLowerCase();
+      const tagNames = (e.tags||[]).map(tid=>{
+        const t = tagById(tid); return t ? t.name.toLowerCase() : "";
+      }).join(" ");
+      // 任一等价词命中标题/内容/标签即算匹配
+      return words.some(word=>
+        title.includes(word) || content.includes(word) || tagNames.includes(word));
     });
   }
   // 标签筛选：条目须包含所有选中的标签（与逻辑）
@@ -1318,22 +1335,22 @@ function bigrams(s){
 /* 神经内科常见近义词／别名表：同一行的词检索时互相等价
    录入条目用了其中一个词，提问用了另一个，也能匹配上 */
 const SYNONYM_GROUPS = [
-  ["头痛","头疼","脑袋疼","头部疼痛"],
+  ["头痛","头疼"],
   ["卒中","中风","脑卒中","脑梗","脑梗死","脑梗塞","脑血管意外"],
   ["脑出血","出血性卒中","颅内出血"],
-  ["短暂性脑缺血发作","tia","小中风"],
-  ["癫痫","痫病","抽搐","惊厥","羊癫疯"],
-  ["眩晕","头晕","晕眩"],
+  ["短暂性脑缺血发作","tia"],
+  ["癫痫","痫性发作","抽搐","惊厥"],
+  ["眩晕","头晕"],
   ["帕金森","帕金森病","震颤麻痹"],
-  ["阿尔茨海默","老年痴呆","认知障碍","痴呆"],
+  ["阿尔茨海默","阿尔茨海默病","老年痴呆","认知障碍","痴呆"],
   ["多发性硬化","ms"],
   ["重症肌无力","mg"],
   ["格林巴利","吉兰巴雷","急性炎性脱髓鞘性多发性神经病"],
   ["面瘫","面神经麻痹","贝尔麻痹"],
-  ["三叉神经痛","面部神经痛"],
+  ["三叉神经痛"],
   ["失眠","睡眠障碍","入睡困难"],
-  ["麻木","感觉异常","发麻"],
-  ["无力","乏力","肌无力","肢体无力"],
+  ["麻木","感觉异常","感觉障碍"],
+  ["肌无力","肢体无力"],
   ["复视","视物重影"],
   ["共济失调","步态不稳","走路不稳"],
   ["溶栓","静脉溶栓","rtpa","阿替普酶"],
