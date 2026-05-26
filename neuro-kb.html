@@ -1314,19 +1314,101 @@ function bigrams(s){
   for(let i=0;i<s.length-1;i++) g.push(s.slice(i,i+2));
   return g;
 }
+
+/* 神经内科常见近义词／别名表：同一行的词检索时互相等价
+   录入条目用了其中一个词，提问用了另一个，也能匹配上 */
+const SYNONYM_GROUPS = [
+  ["头痛","头疼","脑袋疼","头部疼痛"],
+  ["卒中","中风","脑卒中","脑梗","脑梗死","脑梗塞","脑血管意外"],
+  ["脑出血","出血性卒中","颅内出血"],
+  ["短暂性脑缺血发作","tia","小中风"],
+  ["癫痫","痫病","抽搐","惊厥","羊癫疯"],
+  ["眩晕","头晕","晕眩"],
+  ["帕金森","帕金森病","震颤麻痹"],
+  ["阿尔茨海默","老年痴呆","认知障碍","痴呆"],
+  ["多发性硬化","ms"],
+  ["重症肌无力","mg"],
+  ["格林巴利","吉兰巴雷","急性炎性脱髓鞘性多发性神经病"],
+  ["面瘫","面神经麻痹","贝尔麻痹"],
+  ["三叉神经痛","面部神经痛"],
+  ["失眠","睡眠障碍","入睡困难"],
+  ["麻木","感觉异常","发麻"],
+  ["无力","乏力","肌无力","肢体无力"],
+  ["复视","视物重影"],
+  ["共济失调","步态不稳","走路不稳"],
+  ["溶栓","静脉溶栓","rtpa","阿替普酶"],
+  ["抗血小板","阿司匹林","氯吡格雷"],
+  ["脑电图","eeg"],
+  ["核磁","磁共振","mri"],
+  ["ct","计算机断层"]
+];
+/* 把一个词扩展成它的所有近义词 */
+function expandSynonyms(word){
+  const w = word.toLowerCase();
+  const out = new Set([w]);
+  SYNONYM_GROUPS.forEach(group=>{
+    if(group.some(g=>w.includes(g) || g.includes(w))){
+      group.forEach(g=>out.add(g));
+    }
+  });
+  return [...out];
+}
+
+/* 把查询切成检索词块：连续中文按 bigram，英文/数字按整词 */
+function queryTokens(query){
+  const q = (query||"").toLowerCase();
+  const tokens = new Set();
+  // 英文与数字整词
+  (q.match(/[a-z0-9]+/g)||[]).forEach(w=>{ if(w.length>=2) tokens.add(w); });
+  // 中文 bigram
+  bigrams(q.replace(/[a-z0-9]+/g,"")).forEach(g=>tokens.add(g));
+  return [...tokens];
+}
+
+/* 检索：返回与查询最相关的知识条目（已按相关度排序） */
 function retrieve(query){
   if(knowledge.length===0) return [];
-  if(knowledge.length<=6) return knowledge.slice();
-  const qg = [...new Set(bigrams(query))];
+
+  // 查询词 + 同义词扩展
+  const baseTokens = queryTokens(query);
+  const expanded = new Set(baseTokens);
+  // 对原始查询里出现的整词做同义词扩展
+  const qLower = (query||"").toLowerCase();
+  SYNONYM_GROUPS.forEach(group=>{
+    if(group.some(g=>qLower.includes(g))){
+      group.forEach(g=>{
+        // 把近义词也切成 token 加入
+        queryTokens(g).forEach(t=>expanded.add(t));
+      });
+    }
+  });
+  const qTokens = [...expanded];
+  if(qTokens.length===0) return knowledge.slice(0, Math.min(5,knowledge.length));
+
   const scored = knowledge.map(e=>{
-    const text = ((e.title||"")+" "+(e.content||"")).toLowerCase();
+    const title = (e.title||"").toLowerCase();
+    const content = (e.content||"").toLowerCase();
+    // 该条目的标签名
+    const tagNames = (e.tags||[]).map(tid=>{
+      const t = tagById(tid); return t ? t.name.toLowerCase() : "";
+    }).join(" ");
     let score = 0;
-    qg.forEach(g=>{ if(text.includes(g)) score++; });
+    qTokens.forEach(tk=>{
+      // 标题命中权重最高，标签其次，正文再次
+      if(title.includes(tk)) score += 3;
+      if(tagNames.includes(tk)) score += 2;
+      if(content.includes(tk)) score += 1;
+    });
     return { e, score };
   });
   scored.sort((a,b)=>b.score-a.score);
   const hit = scored.filter(x=>x.score>0).slice(0,5).map(x=>x.e);
-  return hit.length ? hit : knowledge.slice(0,3);
+  // 完全没命中：条目少就全给，条目多则给最近更新的几条兜底
+  if(hit.length===0){
+    if(knowledge.length<=5) return knowledge.slice();
+    return knowledge.slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,3);
+  }
+  return hit;
 }
 
 /* ---------- 提示词 ---------- */
