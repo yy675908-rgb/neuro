@@ -190,7 +190,11 @@
     padding:14px 16px;margin-bottom:11px;animation:rise .3s var(--ease);}
   .kb-item h3{font-family:var(--serif);font-weight:500;font-size:16.5px;margin-bottom:3px;}
   .kb-item p{font-size:13.5px;color:var(--muted);line-height:1.55;
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    white-space:pre-wrap;cursor:pointer;}
+  .kb-item p.expanded{display:block;-webkit-line-clamp:unset;overflow:visible;}
+  .kb-item .more-hint{font-size:11.5px;color:var(--accent);margin-top:4px;
+    cursor:pointer;font-weight:600;}
   .kb-item .acts{display:flex;gap:16px;margin-top:10px;}
   .kb-item .acts button{background:none;border:none;font-family:var(--sans);font-size:12.5px;
     color:var(--accent);cursor:pointer;padding:0;font-weight:600;}
@@ -533,6 +537,9 @@
         <div class="model-row">
           <button class="refresh-btn" id="exportBtn" style="flex:1;">导出备份</button>
           <button class="refresh-btn" id="importBtn" style="flex:1;">导入备份</button>
+        </div>
+        <div class="model-row" style="margin-top:7px;">
+          <button class="refresh-btn" id="exportKbBtn" style="flex:1;">只导出知识库</button>
         </div>
         <input type="file" id="importFile" accept="application/json,.json" style="display:none;">
         <div class="model-hint" id="backupHint"></div>
@@ -1235,6 +1242,20 @@ function renderKb(){
     const p = document.createElement("p");
     p.textContent = item.content || "";
     div.appendChild(h); div.appendChild(p);
+    // 内容较长时，可点击展开 / 收起
+    const content = item.content || "";
+    if(content.length > 60 || content.split("\n").length > 2){
+      const hint = document.createElement("div");
+      hint.className = "more-hint";
+      hint.textContent = "展开全文";
+      const toggle = ()=>{
+        const open = p.classList.toggle("expanded");
+        hint.textContent = open ? "收起" : "展开全文";
+      };
+      p.addEventListener("click", toggle);
+      hint.addEventListener("click", toggle);
+      div.appendChild(hint);
+    }
     // 标签
     if((item.tags||[]).length){
       const tg = document.createElement("div");
@@ -2558,32 +2579,123 @@ function loadPdfJs(){
 
 /* 从 PDF 提取文字。返回 {text, kind}
    kind: 'text'=正常文字版  'scanned'=扫描版无文字  'partial'=文字很少疑似混排 */
+/* 从一页的文字片段重建文本：检测单/双栏，按正确阅读顺序拼接 */
+function rebuildPageText(items, pageWidth){
+  if(items.length===0) return "";
+  // 每个片段取 x（左端）、y、文字
+  const frags = items.map(it=>({
+    x: it.transform[4],
+    y: it.transform[5],
+    s: it.str,
+    w: (it.width||0)
+  })).filter(f=>f.s && f.s.trim()!=="");
+  if(frags.length===0) return "";
+
+  // 双栏检测：看 x 起点的分布。若片段明显聚成左右两簇，判为双栏
+  const xs = frags.map(f=>f.x).sort((a,b)=>a-b);
+  const mid = pageWidth/2;
+  const leftCount = xs.filter(x=>x < mid).length;
+  const rightCount = xs.filter(x=>x >= mid).length;
+  // 双栏成立条件：左右都有相当数量片段，且很少有片段横跨中线
+  const crossing = frags.filter(f=>f.x < mid && (f.x + f.w) > mid + pageWidth*0.08).length;
+  const twoCol = leftCount > frags.length*0.25
+              && rightCount > frags.length*0.25
+              && crossing < frags.length*0.12;
+
+  function lines(group){
+    // 按 y 从上到下（y 大在上），同一行的合并
+    group.sort((a,b)=> (b.y - a.y) || (a.x - b.x));
+    const out = [];
+    let cur = [], lastY = null;
+    group.forEach(f=>{
+      if(lastY!==null && Math.abs(f.y-lastY) > 3){
+        out.push(cur); cur = [];
+      }
+      cur.push(f); lastY = f.y;
+    });
+    if(cur.length) out.push(cur);
+    return out.map(line=>{
+      line.sort((a,b)=>a.x-b.x);
+      return line.map(f=>f.s).join("");
+    });
+  }
+
+  let rawLines;
+  if(twoCol){
+    const left = frags.filter(f=>f.x < mid);
+    const right = frags.filter(f=>f.x >= mid);
+    rawLines = lines(left).concat(lines(right));
+  }else{
+    rawLines = lines(frags);
+  }
+  return rawLines.join("\n");
+}
+
+/* 清理：去掉多页重复的页眉页脚行 */
+function stripHeaderFooter(pageTexts){
+  if(pageTexts.length < 3) return pageTexts;   // 页太少不处理
+  // 统计每页"首行"和"末行"，出现在多页的短行视为页眉/页脚
+  const freq = {};
+  pageTexts.forEach(pt=>{
+    const ls = pt.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(ls.length){
+      [ls[0], ls[ls.length-1]].forEach(l=>{
+        if(l.length<=30) freq[l] = (freq[l]||0)+1;
+      });
+    }
+  });
+  const repeated = new Set(
+    Object.keys(freq).filter(k=>freq[k] >= Math.max(3, pageTexts.length*0.4)));
+  if(repeated.size===0) return pageTexts;
+  return pageTexts.map(pt=>{
+    const ls = pt.split("\n");
+    return ls.filter(l=>!repeated.has(l.trim())).join("\n");
+  });
+}
+
+/* 合并被 PDF 硬拆开的断行：
+   一行不以句末标点结尾、且下一行不是新的编号/项目，就接到一起 */
+function mergeBrokenLines(text){
+  const ls = text.split("\n");
+  const out = [];
+  const endPunct = /[。；！？.;!?：:]$/;
+  const startsNew = /^(\d+[.、)）]|[（(]\d+[）)]|[A-Z][.、]|[•·\-—]|第[一二三四五六七八九十]+|[①②③④⑤⑥⑦⑧⑨⑩])/;
+  ls.forEach(line=>{
+    const t = line.trim();
+    if(t==="") return;
+    if(out.length>0){
+      const prev = out[out.length-1];
+      // 上一行没有句末标点，且当前行不是新条目 → 接上
+      if(!endPunct.test(prev) && !startsNew.test(t) && prev.length>0){
+        out[out.length-1] = prev + t;
+        return;
+      }
+    }
+    out.push(t);
+  });
+  return out.join("\n");
+}
+
 async function extractPdfText(arrayBuffer){
   const pdfjsLib = await loadPdfJs();
   const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
-  let allText = "";
   const pageCount = Math.min(pdf.numPages, 60);   // 最多取 60 页
+  const pageTexts = [];
   for(let i=1;i<=pageCount;i++){
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    // 按 y 坐标分行，合并同一行的文字片段
-    const items = content.items;
-    let pageText = "";
-    let lastY = null;
-    items.forEach(it=>{
-      const y = it.transform[5];
-      if(lastY!==null && Math.abs(y-lastY)>3){ pageText += "\n"; }
-      pageText += it.str;
-      lastY = y;
-    });
-    allText += pageText + "\n\n";
+    const viewport = page.getViewport({scale:1});
+    pageTexts.push(rebuildPageText(content.items, viewport.width));
   }
-  const clean = allText.replace(/\n{3,}/g,"\n\n").trim();
+  // 清页眉页脚
+  const stripped = stripHeaderFooter(pageTexts);
+  // 合并断行（逐页处理，避免跨页误接）
+  const merged = stripped.map(pt=>mergeBrokenLines(pt));
+  const clean = merged.join("\n\n").replace(/\n{3,}/g,"\n\n").trim();
   // 判断质量
   if(clean.length < 20){
     return { text:"", kind:"scanned" };
   }
-  // 文字过少（相对页数）疑似扫描混排
   if(clean.length < pageCount * 80){
     return { text:clean, kind:"partial" };
   }
@@ -2855,7 +2967,8 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
       _exportedAt: new Date().toISOString(),
       settings, knowledge, tags, conversations, currentId
     };
-    const blob = new Blob([JSON.stringify(dump,null,2)], {type:"application/json"});
+    const json = JSON.stringify(dump,null,2);
+    const blob = new Blob([json], {type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     const stamp = new Date().toISOString().slice(0,10);
@@ -2865,7 +2978,45 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
     a.click();
     document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url), 1000);
-    setBackupHint("已导出备份文件，请妥善保存。");
+    // 显示备份大小，便于判断是否需要清理对话里的 PDF
+    const mb = blob.size / 1024 / 1024;
+    const sizeStr = mb >= 1 ? mb.toFixed(1)+" MB" : Math.round(blob.size/1024)+" KB";
+    let hint = "已导出备份文件（约 " + sizeStr + "），请妥善保存。";
+    if(mb >= 8){
+      hint += "\n备份较大，多因对话中保留了 PDF。如不需要，可在对话的 PDF 列表里删掉部分。";
+    }
+    setBackupHint(hint);
+  }catch(err){
+    setBackupHint("导出失败：" + err.message, true);
+  }
+});
+/* 只导出知识库（knowledge + tags） */
+document.getElementById("exportKbBtn").addEventListener("click",()=>{
+  try{
+    if(knowledge.length===0){
+      setBackupHint("知识库还是空的，没有可导出的内容。", true);
+      return;
+    }
+    const dump = {
+      _app: "neuro-kb",
+      _type: "kb-only",
+      _version: 6,
+      _exportedAt: new Date().toISOString(),
+      knowledge, tags
+    };
+    const json = JSON.stringify(dump,null,2);
+    const blob = new Blob([json], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = "知识库备份-" + stamp + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    const kb = Math.round(blob.size/1024);
+    setBackupHint("已导出知识库（"+knowledge.length+" 条，约 "+kb+" KB）。\n导入这个文件时会合并进现有知识库，不影响对话和设置。");
   }catch(err){
     setBackupHint("导出失败：" + err.message, true);
   }
@@ -2884,6 +3035,43 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
     catch(err){ setBackupHint("文件无法解析，可能不是有效的备份文件。", true); return; }
     if(!dump || dump._app!=="neuro-kb"){
       setBackupHint("这不是本应用的备份文件。", true); return;
+    }
+    // 只含知识库的备份：合并进现有知识库，不动对话和设置
+    if(dump._type==="kb-only"){
+      if(!confirm("导入这个知识库备份？\n它会合并进现有知识库（同名同内容的条目会跳过），不影响对话和设置。")) return;
+      try{
+        const incomingTags = Array.isArray(dump.tags) ? dump.tags : [];
+        // 合并标签：按 id 去重
+        incomingTags.forEach(t=>{
+          if(!tags.find(x=>x.id===t.id)) tags.push(t);
+        });
+        const incoming = Array.isArray(dump.knowledge) ? dump.knowledge : [];
+        let added = 0;
+        incoming.forEach(e=>{
+          // 跳过完全重复的条目（标题+内容都相同）
+          const dup = knowledge.find(x=>x.title===e.title && x.content===e.content);
+          if(dup) return;
+          knowledge.push({
+            id: "k"+Date.now()+Math.random().toString(36).slice(2,6),
+            title: e.title||"", content: e.content||"",
+            tags: e.tags||[],
+            createdAt: e.createdAt||Date.now(),
+            updatedAt: e.updatedAt||Date.now()
+          });
+          added++;
+        });
+        await KBStore.saveEntries(knowledge);
+        await KBStore.saveTags(tags);
+        kbFilterTagIds = []; kbSearchKw = "";
+        const ks = document.getElementById("kbSearch");
+        if(ks) ks.value = "";
+        renderKb();
+        setBackupHint("✓ 已导入知识库：新增 "+added+" 条"
+          + (incoming.length-added>0 ? "，跳过 "+(incoming.length-added)+" 条重复" : "")+"。");
+      }catch(err){
+        setBackupHint("导入知识库出错：" + err.message, true);
+      }
+      return;
     }
     if(!confirm("导入备份会覆盖当前所有对话、知识库和设置，确定继续？")) return;
     try{
