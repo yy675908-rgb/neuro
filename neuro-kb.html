@@ -130,6 +130,27 @@
   .pend-img .rm{position:absolute;top:-6px;right:-6px;width:20px;height:20px;
     border-radius:50%;background:var(--warn);color:#fff;border:none;
     font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  /* 输入栏的 PDF 按钮 */
+  .pdf-btn{position:relative;}
+  .pdf-btn .pdf-ico{font-size:10px;font-weight:700;}
+  .pdf-btn .pdf-num{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;
+    border-radius:8px;background:var(--warn);color:#fff;font-size:10px;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;}
+  /* PDF 列表项 */
+  .pdf-row{display:flex;align-items:center;gap:10px;background:var(--card);
+    box-shadow:var(--shadow);border-radius:11px;padding:11px 13px;margin-bottom:8px;}
+  .pdf-row .pr-icon{flex-shrink:0;width:32px;height:38px;border-radius:5px;
+    background:var(--accent);color:#fff;font-size:9.5px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;}
+  .pdf-row .pr-info{flex:1;min-width:0;}
+  .pdf-row .pr-name{font-size:13.5px;color:var(--ink);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;}
+  .pdf-row .pr-state{font-size:11px;margin-top:2px;color:var(--accent);}
+  .pdf-row .pr-state.warn{color:var(--warn);}
+  .pdf-row .pr-del{flex-shrink:0;background:none;border:none;color:var(--warn);
+    font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);padding:5px;}
+  .pdf-empty{text-align:center;color:var(--muted);font-family:var(--serif);
+    font-style:italic;font-size:14px;padding:24px 12px;}
 
   #inputBar{flex-shrink:0;background:var(--paper);
     padding:8px 12px calc(env(safe-area-inset-bottom) + 10px);
@@ -421,9 +442,12 @@
     </div>
     <div id="chatScroll"></div>
     <div id="pendingImgs"></div>
+    <div id="convoPdfBar"></div>
     <div id="inputBar">
-      <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
-      <button class="attach-btn" id="attachBtn" aria-label="添加图片">📎</button>
+      <input type="file" id="fileInput" accept="image/*,application/pdf" multiple style="display:none;">
+      <button class="attach-btn" id="attachBtn" aria-label="添加图片或PDF">📎</button>
+      <button class="attach-btn pdf-btn" id="pdfBtn" style="display:none;" aria-label="本对话的PDF">
+        <span class="pdf-ico">PDF</span><span class="pdf-num" id="pdfBtnCount">0</span></button>
       <textarea id="qInput" rows="1" placeholder="提一个问题…"></textarea>
       <button class="send-btn" id="sendBtn">↑</button>
     </div>
@@ -644,6 +668,18 @@
   </div>
 </div>
 
+<!-- 本对话的 PDF 列表 -->
+<div class="modal-bg" id="pdfListModal">
+  <div class="modal">
+    <h2>本对话的 PDF</h2>
+    <div class="desc" style="margin-bottom:10px;">这些 PDF 会在每次提问时一并发给模型作参考。不需要的可以删掉。</div>
+    <div id="pdfListBox"></div>
+    <div class="modal-acts" style="margin-top:10px;">
+      <button class="btn-cancel" id="pdfListClose">关闭</button>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 
@@ -767,7 +803,8 @@ function newConvoObj(){
     persona: settings.defaultPersona || "",
     provider: settings.provider || "claude",   // 该对话使用的模型提供方
     pinned: 0,                          // 置顶时间戳，0=未置顶
-    favorite: 0                         // 收藏时间戳，0=未收藏
+    favorite: 0,                        // 收藏时间戳，0=未收藏
+    pdfs: []                            // 本对话上传的 PDF [{id,name,data,text,kind}]
   };
 }
 function curConvo(){
@@ -848,7 +885,7 @@ async function init(){
     }
   }
   // 旧对话补齐 provider 字段
-  conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider || "claude"; if(!c.pinned) c.pinned = 0; if(!c.favorite) c.favorite = 0; });
+  conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider || "claude"; if(!c.pinned) c.pinned = 0; if(!c.favorite) c.favorite = 0; if(!c.pdfs) c.pdfs = []; });
   // 至少保证有一个对话
   if(conversations.length===0) conversations.push(newConvoObj());
   if(!currentId || !curConvo()) currentId = conversations[0].id;
@@ -860,6 +897,7 @@ async function init(){
   refreshStatus();
   applyAppName();
   renderHistory();
+  renderConvoPdfBar();
 }
 
 function refreshStatus(){
@@ -881,6 +919,7 @@ document.querySelectorAll("nav button").forEach(b=>{
     b.classList.add("on");
     document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
     document.getElementById("view-"+b.dataset.v).classList.add("active");
+    if(b.dataset.v==="chat") renderConvoPdfBar();
   });
 });
 
@@ -1467,6 +1506,24 @@ async function callModel(system, history, onDelta, providerKey, signal){
   const asText = c => (typeof c==="string") ? c : (c.text||"");
   // 是否带图
   const hasImg = c => c && typeof c==="object" && c.images && c.images.length;
+  // 是否带 PDF
+  const hasPdf = c => c && typeof c==="object" && c.pdfs && c.pdfs.length;
+  // 把 PDF 的提取文字拼成一段（给 DeepSeek/千问 等不支持原生 PDF 的）
+  const pdfsAsText = c => {
+    if(!hasPdf(c)) return "";
+    let s = "";
+    c.pdfs.forEach(p=>{
+      if(p.kind==="text" || p.kind==="partial"){
+        s += "\n\n【PDF文档：" + p.name + "】\n" + (p.text||"");
+      }
+    });
+    return s;
+  };
+  // 检查是否有无法用文字方式处理的 PDF（扫描版/解析失败）
+  const badPdfNames = c => {
+    if(!hasPdf(c)) return [];
+    return c.pdfs.filter(p=>p.kind==="scanned"||p.kind==="fail").map(p=>p.name);
+  };
 
   let url, headers, body, parseSSE;
 
@@ -1480,15 +1537,28 @@ async function callModel(system, history, onDelta, providerKey, signal){
     };
     body = JSON.stringify({ model, max_tokens:1500, system, stream:true,
       messages:history.map(m=>{
-        if(hasImg(m.content)){
-          const parts = m.content.images.map(im=>({
-            type:"image",
-            source:{ type:"base64", media_type:im.mediaType, data:im.data }
-          }));
-          if(asText(m.content)) parts.push({type:"text", text:asText(m.content)});
+        const c = m.content;
+        if(hasImg(c) || hasPdf(c)){
+          const parts = [];
+          // PDF：Claude 支持 document 类型直接发原始文件
+          if(hasPdf(c)){
+            c.pdfs.forEach(p=>{
+              if(p.data) parts.push({
+                type:"document",
+                source:{ type:"base64", media_type:"application/pdf", data:p.data }
+              });
+            });
+          }
+          if(hasImg(c)){
+            c.images.forEach(im=>parts.push({
+              type:"image",
+              source:{ type:"base64", media_type:im.mediaType, data:im.data }
+            }));
+          }
+          if(asText(c)) parts.push({type:"text", text:asText(c)});
           return { role:m.role, content:parts };
         }
-        return { role:m.role, content:asText(m.content) };
+        return { role:m.role, content:asText(c) };
       }) });
     parseSSE = (obj)=>{
       if(obj.type==="content_block_delta" && obj.delta && obj.delta.text) return obj.delta.text;
@@ -1500,13 +1570,20 @@ async function callModel(system, history, onDelta, providerKey, signal){
     body = JSON.stringify({
       systemInstruction:{ parts:[{text:system}] },
       contents:history.map(m=>{
+        const c = m.content;
         const parts = [];
-        if(hasImg(m.content)){
-          m.content.images.forEach(im=>{
+        // PDF：Gemini 用 inlineData 直接发 PDF
+        if(hasPdf(c)){
+          c.pdfs.forEach(p=>{
+            if(p.data) parts.push({ inlineData:{ mimeType:"application/pdf", data:p.data } });
+          });
+        }
+        if(hasImg(c)){
+          c.images.forEach(im=>{
             parts.push({ inlineData:{ mimeType:im.mediaType, data:im.data } });
           });
         }
-        parts.push({ text:asText(m.content) });
+        parts.push({ text:asText(c) || " " });
         return { role: m.role==="assistant" ? "model" : "user", parts };
       })
     });
@@ -1518,17 +1595,38 @@ async function callModel(system, history, onDelta, providerKey, signal){
     // openai 兼容：GPT / DeepSeek / 千问 / Grok / 自定义
     url = base + "/chat/completions";
     headers = { "content-type":"application/json", "authorization":"Bearer "+key };
+    const isGpt = (pk==="openai");
     body = JSON.stringify({ model, stream:true,
       messages:[{role:"system",content:system}, ...history.map(m=>{
-        if(hasImg(m.content)){
-          const parts = m.content.images.map(im=>({
-            type:"image_url",
-            image_url:{ url:"data:"+im.mediaType+";base64,"+im.data }
-          }));
-          if(asText(m.content)) parts.push({type:"text", text:asText(m.content)});
-          return { role:m.role, content:parts };
+        const c = m.content;
+        if(hasImg(c) || hasPdf(c)){
+          const parts = [];
+          if(hasPdf(c)){
+            if(isGpt){
+              // GPT 支持 file 类型直接发 PDF
+              c.pdfs.forEach(p=>{
+                if(p.data) parts.push({
+                  type:"file",
+                  file:{ filename:p.name, file_data:"data:application/pdf;base64,"+p.data }
+                });
+              });
+            }
+            // 非 GPT（DeepSeek/千问）：PDF 文字会并进文本，见下方
+          }
+          if(hasImg(c)){
+            c.images.forEach(im=>parts.push({
+              type:"image_url",
+              image_url:{ url:"data:"+im.mediaType+";base64,"+im.data }
+            }));
+          }
+          let txt = asText(c);
+          // 非 GPT：把 PDF 提取的文字附进文本
+          if(hasPdf(c) && !isGpt) txt += pdfsAsText(c);
+          if(txt) parts.push({type:"text", text:txt});
+          return { role:m.role, content:parts.length===1 && parts[0].type==="text"
+            ? parts[0].text : parts };
         }
-        return { role:m.role, content:asText(m.content) };
+        return { role:m.role, content:asText(c) };
       })] });
     parseSSE = (obj)=>{
       try{ return obj.choices[0].delta.content || ""; }
@@ -1854,6 +1952,19 @@ async function runTurn(convo, used){
     role: m.role==="user" ? "user" : "assistant",
     content: activeContent(m)
   }));
+  // 把本对话的 PDF 附到最后一条 user 消息上一起发
+  if(convo.pdfs && convo.pdfs.length){
+    for(let i=history.length-1;i>=0;i--){
+      if(history[i].role==="user"){
+        let c = history[i].content;
+        if(typeof c==="string") c = { text:c };
+        else c = Object.assign({}, c);
+        c.pdfs = convo.pdfs.filter(p=>p.kind!=="loading");
+        history[i].content = c;
+        break;
+      }
+    }
+  }
   abortCtrl = new AbortController();
   try{
     const system = buildSystemPrompt(used, convo.persona);
@@ -2023,6 +2134,21 @@ async function send(){
       + "」不支持识别图片。请点顶栏模型按钮换成 Claude、GPT 或 Gemini。", null, -1);
     return;
   }
+  // 对话带 PDF 且当前是 DeepSeek/千问 时，检查有无扫描版（它们处理不了）
+  if(convo.pdfs && convo.pdfs.length){
+    const pk = convo.provider;
+    const textBased = (pk==="deepseek" || pk==="qwen");
+    if(textBased){
+      const bad = convo.pdfs.filter(p=>p.kind==="scanned"||p.kind==="fail");
+      if(bad.length){
+        addMsg("err","本对话里有扫描版或无法解析的 PDF（" + bad.map(p=>p.name).join("、")
+          + "）。「" + PROVIDERS[pk].label + "」只能处理文字，读不了这类 PDF。\n"
+          + "请点顶栏模型按钮换成 Claude、GPT 或 Gemini —— 它们能直接读 PDF 原文件；"
+          + "或在 PDF 列表里删掉这些扫描件。", null, -1);
+        return;
+      }
+    }
+  }
 
   setBusy(true);
   const imgs = pendingImages.slice();
@@ -2097,6 +2223,7 @@ function switchConvo(id){
   saveConvos();
   closeDrawer();
   renderHistory();
+  renderConvoPdfBar();
 }
 function deleteConvo(id){
   if(!confirm("删除这个对话？此操作无法撤销。")) return;
@@ -2352,6 +2479,62 @@ document.getElementById("modelModal").addEventListener("click",e=>{
 /* ---------- 图片附件 ---------- */
 const MAX_IMG_DIM = 1400;          // 超过则等比缩小，控制体积
 const MAX_IMGS = 4;
+const MAX_PDF_SIZE = 20 * 1024 * 1024;   // PDF 上限 20MB
+
+/* 动态加载 pdf.js（只在第一次传 PDF 时加载，不拖慢启动） */
+let _pdfjsLoading = null;
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(_pdfjsLoading) return _pdfjsLoading;
+  _pdfjsLoading = new Promise((resolve,reject)=>{
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload = ()=>{
+      if(window.pdfjsLib){
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        resolve(window.pdfjsLib);
+      }else reject(new Error("pdf.js 加载异常"));
+    };
+    s.onerror = ()=>reject(new Error("无法加载 PDF 解析库，请检查网络"));
+    document.head.appendChild(s);
+  });
+  return _pdfjsLoading;
+}
+
+/* 从 PDF 提取文字。返回 {text, kind}
+   kind: 'text'=正常文字版  'scanned'=扫描版无文字  'partial'=文字很少疑似混排 */
+async function extractPdfText(arrayBuffer){
+  const pdfjsLib = await loadPdfJs();
+  const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  let allText = "";
+  const pageCount = Math.min(pdf.numPages, 60);   // 最多取 60 页
+  for(let i=1;i<=pageCount;i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    // 按 y 坐标分行，合并同一行的文字片段
+    const items = content.items;
+    let pageText = "";
+    let lastY = null;
+    items.forEach(it=>{
+      const y = it.transform[5];
+      if(lastY!==null && Math.abs(y-lastY)>3){ pageText += "\n"; }
+      pageText += it.str;
+      lastY = y;
+    });
+    allText += pageText + "\n\n";
+  }
+  const clean = allText.replace(/\n{3,}/g,"\n\n").trim();
+  // 判断质量
+  if(clean.length < 20){
+    return { text:"", kind:"scanned" };
+  }
+  // 文字过少（相对页数）疑似扫描混排
+  if(clean.length < pageCount * 80){
+    return { text:clean, kind:"partial" };
+  }
+  return { text:clean, kind:"text" };
+}
 
 function renderPendingImgs(){
   const box = document.getElementById("pendingImgs");
@@ -2406,16 +2589,123 @@ document.getElementById("attachBtn").addEventListener("click",()=>{
   document.getElementById("fileInput").click();
 });
 document.getElementById("fileInput").addEventListener("change", async (e)=>{
-  const files = [...e.target.files].filter(f=>f.type.startsWith("image/"));
+  const files = [...e.target.files];
+  const convo = curConvo();
   for(const f of files){
-    if(pendingImages.length>=MAX_IMGS){
-      alert("一次最多添加 " + MAX_IMGS + " 张图片");
-      break;
+    if(f.type.startsWith("image/")){
+      if(pendingImages.length>=MAX_IMGS){
+        alert("一次最多添加 " + MAX_IMGS + " 张图片");
+        continue;
+      }
+      try{ pendingImages.push(await processImage(f)); }catch(err){}
+    }else if(f.type==="application/pdf"){
+      if(!convo){ continue; }
+      if(f.size > MAX_PDF_SIZE){
+        alert("PDF「"+f.name+"」超过 20MB，无法添加");
+        continue;
+      }
+      if((convo.pdfs||[]).length>=5){
+        alert("一个对话最多保留 5 个 PDF，请先在 PDF 列表里删掉一些");
+        continue;
+      }
+      await addConvoPdf(convo, f);
     }
-    try{ pendingImages.push(await processImage(f)); }catch(err){}
   }
   renderPendingImgs();
-  e.target.value = "";       // 允许再次选同一文件
+  renderConvoPdfBar();
+  e.target.value = "";
+});
+
+/* 处理一个 PDF：读成 base64、提取文字，存进对话的 pdfs 列表 */
+async function addConvoPdf(convo, file){
+  // 显示一个"解析中"占位
+  const id = "p"+Date.now()+Math.random().toString(36).slice(2,5);
+  const entry = { id, name:file.name, data:"", text:"", kind:"loading" };
+  if(!convo.pdfs) convo.pdfs = [];
+  convo.pdfs.push(entry);
+  renderConvoPdfBar();
+  try{
+    const buf = await file.arrayBuffer();
+    let binary = "";
+    const bytes = new Uint8Array(buf);
+    for(let i=0;i<bytes.length;i++) binary += String.fromCharCode(bytes[i]);
+    entry.data = btoa(binary);
+    try{
+      const r = await extractPdfText(buf.slice(0));
+      entry.text = r.text;
+      entry.kind = r.kind;
+    }catch(err){
+      entry.kind = "fail";
+      entry.extractError = err.message;
+    }
+  }catch(err){
+    entry.kind = "fail";
+    entry.extractError = "文件读取失败";
+  }
+  saveConvos();
+  renderConvoPdfBar();
+}
+
+/* 刷新输入栏的 PDF 按钮：有 PDF 才显示，并显示数量 */
+function renderConvoPdfBar(){
+  const btn = document.getElementById("pdfBtn");
+  const convo = curConvo();
+  const n = (convo && convo.pdfs) ? convo.pdfs.length : 0;
+  if(n>0){
+    btn.style.display = "flex";
+    document.getElementById("pdfBtnCount").textContent = n;
+  }else{
+    btn.style.display = "none";
+  }
+}
+function pdfKindLabel(kind){
+  if(kind==="loading") return ["解析中…", false];
+  if(kind==="text") return ["可提取文字", false];
+  if(kind==="partial") return ["文字较少，可能不全", true];
+  if(kind==="scanned") return ["扫描版（无文字层）", true];
+  return ["解析失败", true];
+}
+/* 打开本对话 PDF 列表 */
+function openPdfList(){
+  const convo = curConvo();
+  if(!convo) return;
+  const box = document.getElementById("pdfListBox");
+  box.innerHTML = "";
+  if(!convo.pdfs || convo.pdfs.length===0){
+    box.innerHTML = '<div class="pdf-empty">本对话还没有 PDF</div>';
+  }else{
+    convo.pdfs.forEach(pf=>{
+      const row = document.createElement("div");
+      row.className = "pdf-row";
+      const icon = document.createElement("div");
+      icon.className = "pr-icon"; icon.textContent = "PDF";
+      const info = document.createElement("div");
+      info.className = "pr-info";
+      const name = document.createElement("div");
+      name.className = "pr-name"; name.textContent = pf.name;
+      const state = document.createElement("div");
+      const lab = pdfKindLabel(pf.kind);
+      state.className = "pr-state" + (lab[1]?" warn":"");
+      state.textContent = lab[0];
+      info.appendChild(name); info.appendChild(state);
+      const del = document.createElement("button");
+      del.className = "pr-del"; del.textContent = "删除";
+      del.addEventListener("click",()=>{
+        convo.pdfs = convo.pdfs.filter(x=>x.id!==pf.id);
+        saveConvos();
+        openPdfList();
+        renderConvoPdfBar();
+      });
+      row.appendChild(icon); row.appendChild(info); row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+  openModal("pdfListModal");
+}
+document.getElementById("pdfBtn").addEventListener("click", openPdfList);
+document.getElementById("pdfListClose").addEventListener("click",()=>closeModal("pdfListModal"));
+document.getElementById("pdfListModal").addEventListener("click",e=>{
+  if(e.target.id==="pdfListModal") closeModal("pdfListModal");
 });
 
 /* ---------- 对话压缩摘要 ---------- */
@@ -2537,7 +2827,7 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
       if(!settings.userName) settings.userName = "我";
       if(!settings.botName) settings.botName = "助手";
       if(!settings.appName) settings.appName = "神经内科知识库";
-      conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider||"claude"; if(!c.pinned) c.pinned = 0; if(!c.favorite) c.favorite = 0; });
+      conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider||"claude"; if(!c.pinned) c.pinned = 0; if(!c.favorite) c.favorite = 0; if(!c.pdfs) c.pdfs = []; });
       if(conversations.length===0) conversations.push(newConvoObj());
       if(!curConvo()) currentId = conversations[0].id;
       await Store.set("nkb_settings", JSON.stringify(settings));
@@ -2549,6 +2839,7 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
       document.getElementById("kbSearch").value = "";
       buildProvGrid(); renderSettings(); renderKb();
       refreshStatus(); applyAppName(); renderHistory();
+      renderConvoPdfBar();
       setBackupHint("✓ 导入成功，数据已恢复。");
     }catch(err){
       setBackupHint("导入过程出错：" + err.message, true);
