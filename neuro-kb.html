@@ -466,7 +466,6 @@
       <button id="modelBtn"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
       <div class="bar-spacer"></div>
       <button class="bar-btn kb-toggle on" id="kbToggleBtn" aria-label="是否参考知识库">库 ✓</button>
-      <button class="icon-btn" id="favBtn" aria-label="收藏夹">♥</button>
       <button class="bar-btn" id="personaBtn">倾向</button>
       <button class="icon-btn" id="newChatBtn" aria-label="新对话">＋</button>
     </div>
@@ -551,6 +550,12 @@
       </div>
       <button class="save-btn" id="saveSetBtn">保存设置</button>
       <div class="saved-flash" id="savedFlash"></div>
+
+      <div class="field" style="margin-top:14px;">
+        <label>收藏夹</label>
+        <div class="desc">你收藏的对话和回复都在这里。</div>
+        <button class="refresh-btn" id="favBtn" style="width:100%;">★ 打开收藏夹</button>
+      </div>
 
       <div class="field" style="margin-top:14px;">
         <label>数据备份</label>
@@ -645,9 +650,9 @@
 <!-- 模型选择（当前对话） -->
 <div class="modal-bg" id="modelModal">
   <div class="modal">
-    <h2>这个对话使用的模型</h2>
+    <h2 id="modelModalTitle">选择模型</h2>
     <div class="desc" style="margin-bottom:12px;">
-      切换只影响当前对话，历史上下文会保留。灰色的需要先到「设置」里填密钥。</div>
+      切换只影响当前对话的模型，历史上下文会保留。</div>
     <div id="modelPickList"></div>
   </div>
 </div>
@@ -949,7 +954,9 @@ function refreshStatus(){
   const btn = document.getElementById("modelBtn");
   const label = document.getElementById("modelLabel");
   if(!btn || !label) return;
-  label.textContent = PROVIDERS[prov] ? PROVIDERS[prov].label : "模型";
+  // 显示当前提供方的具体模型名；没有则退回提供方名
+  const modelName = settings.models[prov] || (PROVIDERS[prov] && PROVIDERS[prov].model) || "";
+  label.textContent = modelName || (PROVIDERS[prov] ? PROVIDERS[prov].label : "模型");
   const hasKey = !!settings.keys[prov];
   btn.classList.toggle("unset", !hasKey);
 }
@@ -1102,6 +1109,10 @@ async function fetchModels(){
       setModelHint("接口返回空列表，请手动填写模型名。", true);
     }else{
       fetchedModels = ids;
+      // 按提供方持久化保存，供顶栏快速切换用
+      if(!settings.modelLists) settings.modelLists = {};
+      settings.modelLists[settings.provider] = ids;
+      Store.set("nkb_settings", JSON.stringify(settings));
       setModelHint("已获取 " + ids.length + " 个模型，点上方模型框选择。", false);
       openModelNameModal();        // 获取成功后直接打开选择列表
     }
@@ -2562,46 +2573,56 @@ function renderModelPicker(){
   const box = document.getElementById("modelPickList");
   box.innerHTML = "";
   const convo = curConvo();
-  const cur = convo ? convo.provider : settings.provider;
-  PROV_KEYS.forEach(pk=>{
-    const prov = PROVIDERS[pk];
-    const hasKey = !!settings.keys[pk];
-    const div = document.createElement("div");
-    div.className = "model-pick" + (pk===cur ? " on" : "");
-    const main = document.createElement("div");
-    main.className = "mp-main";
-    const name = document.createElement("div");
-    name.className = "mp-name";
-    name.textContent = prov.label;
-    const meta = document.createElement("div");
-    meta.className = "mp-meta";
-    meta.textContent = settings.models[pk] || prov.model || "（未指定模型）";
-    main.appendChild(name); main.appendChild(meta);
-    const state = document.createElement("div");
-    state.className = "mp-state " + (hasKey ? "ready" : "empty");
-    state.textContent = hasKey ? (pk===cur ? "使用中" : "可用") : "未配置";
-    div.appendChild(main); div.appendChild(state);
-    div.addEventListener("click",()=>{
-      if(!hasKey){
-        // 未配密钥：跳到设置页
-        closeModal("modelModal");
-        settings.provider = pk;
-        renderSettings();
-        document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
-        document.querySelector('nav button[data-v="set"]').classList.add("on");
-        document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
-        document.getElementById("view-set").classList.add("active");
-        return;
+  const pk = convo ? convo.provider : settings.provider;
+  const prov = PROVIDERS[pk];
+  // 标题显示当前提供方
+  const titleEl = document.getElementById("modelModalTitle");
+  if(titleEl) titleEl.textContent = (prov ? prov.label : "") + " · 选择模型";
+
+  // 该提供方的模型列表：已获取的 + 当前用的（确保当前的一定在列表里）
+  const list = (settings.modelLists && settings.modelLists[pk]) ? settings.modelLists[pk].slice() : [];
+  const curModel = settings.models[pk] || (prov && prov.model) || "";
+  if(curModel && !list.includes(curModel)) list.unshift(curModel);
+
+  if(list.length===0){
+    box.innerHTML = '<div class="pdf-empty">还没有该平台的模型列表。<br>'
+      + '请到「设置」里点「获取列表」，或手动填写模型名。</div>';
+  }else{
+    list.forEach(mid=>{
+      const div = document.createElement("div");
+      div.className = "model-pick" + (mid===curModel ? " on" : "");
+      const name = document.createElement("div");
+      name.className = "mp-name";
+      name.textContent = mid;
+      div.appendChild(name);
+      if(mid===curModel){
+        const st = document.createElement("div");
+        st.className = "mp-state ready";
+        st.textContent = "使用中";
+        div.appendChild(st);
       }
-      if(convo){
-        convo.provider = pk;
-        saveConvos();
+      div.addEventListener("click",()=>{
+        settings.models[pk] = mid;
+        Store.set("nkb_settings", JSON.stringify(settings));
         refreshStatus();
-      }
-      closeModal("modelModal");
+        if(typeof renderSettings==="function") renderSettings();
+        closeModal("modelModal");
+      });
+      box.appendChild(div);
     });
-    box.appendChild(div);
+  }
+  // 末尾给一个"去设置换平台/获取列表"的入口
+  const toSet = document.createElement("div");
+  toSet.className = "model-pick to-set";
+  toSet.innerHTML = '<div class="mp-name" style="color:var(--accent);">⚙ 到设置里换平台或获取模型列表</div>';
+  toSet.addEventListener("click",()=>{
+    closeModal("modelModal");
+    document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+    document.querySelector('nav button[data-v="set"]').classList.add("on");
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    document.getElementById("view-set").classList.add("active");
   });
+  box.appendChild(toSet);
 }
 document.getElementById("modelBtn").addEventListener("click",()=>{
   renderModelPicker();
