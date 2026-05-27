@@ -68,6 +68,10 @@
     font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;
     transition:transform .12s var(--ease);}
   .bar-btn:active{transform:scale(.97);}
+  /* 知识库开关：开=主题色填充，关=灰色描边 */
+  .kb-toggle{padding:0 11px;}
+  .kb-toggle.on{background:var(--accent);color:#fff;box-shadow:var(--shadow);}
+  .kb-toggle.off{background:var(--card);color:var(--muted);}
 
   #chatScroll{flex:1;overflow-y:auto;padding:14px 16px 8px;
     background:var(--paper);overscroll-behavior:none;}
@@ -461,6 +465,7 @@
       <button class="icon-btn" id="convoListBtn" aria-label="对话列表">☰</button>
       <button id="modelBtn"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
       <div class="bar-spacer"></div>
+      <button class="bar-btn kb-toggle on" id="kbToggleBtn" aria-label="是否参考知识库">库 ✓</button>
       <button class="icon-btn" id="favBtn" aria-label="收藏夹">♥</button>
       <button class="bar-btn" id="personaBtn">倾向</button>
       <button class="icon-btn" id="newChatBtn" aria-label="新对话">＋</button>
@@ -828,6 +833,7 @@ let busy = false;
 let pendingImages = [];      // 待发送的图片 [{dataUrl, mediaType, data}]
 let abortCtrl = null;        // 当前请求的中止控制器
 let tags = [];               // 标签 [{id,name,group}]
+let useKb = true;            // 是否在提问时参考知识库
 
 /* ---------- 工具函数 ---------- */
 function newConvoObj(){
@@ -1536,6 +1542,7 @@ function queryTokens(query){
 
 /* 检索：返回与查询最相关的知识条目（已按相关度排序） */
 function retrieve(query){
+  if(!useKb) return [];           // 知识库开关关闭时，不检索
   if(knowledge.length===0) return [];
 
   // 查询词 + 同义词扩展
@@ -1581,14 +1588,14 @@ function retrieve(query){
 function buildSystemPrompt(used, persona){
   let p = "你是一位严谨的神经内科知识助手，服务对象是一名神经内科医生。";
   if(used.length){
-    p += "请优先依据下面提供的【知识库摘录】回答问题。规则：\n"
-       + "1. 凡是用到知识库的内容，在相应位置用「条目标题」标注来源。\n"
-       + "2. 若知识库摘录不足以回答，明确写出「知识库未涵盖此点」，再基于通用医学知识谨慎补充，并注明该部分非来自知识库。\n"
-       + "3. 不得编造知识库中不存在的内容。回答简洁、专业、准确。\n\n【知识库摘录】\n";
+    p += "回答时，请把下面的【知识库摘录】作为补充参考，规则如下：\n"
+       + "1. 完整、专业地回答用户的问题，该讲的通用医学知识要讲全，不要因为知识库未提及就省略或回避。\n"
+       + "2. 如果知识库摘录里有与问题相关的内容，把它结合进回答，并在相应位置用「条目标题」标注来源。\n"
+       + "3. 知识库摘录可能只与问题部分相关、甚至关联很弱；这种情况下以通用医学知识为主作答即可，不必强行套用知识库内容。\n"
+       + "4. 不得编造知识库中不存在的内容，但通用医学知识可正常使用。回答简洁、专业、准确。\n\n【知识库摘录（仅供参考）】\n";
     used.forEach((e,i)=>{ p += `〔${i+1}〕${e.title||"无标题"}\n${e.content||""}\n\n`; });
   }else{
-    p += "当前知识库为空或无相关条目。请基于通用医学知识谨慎回答，"
-       + "并在开头注明「以下回答来自通用知识，未基于个人知识库」。回答简洁、专业、准确。";
+    p += "请基于通用医学知识，完整、专业、准确地回答问题。";
   }
   if(persona && persona.trim()){
     p += "\n\n【本次对话的回复偏好】\n在不违反上述规则的前提下，请尽量遵循以下偏好：\n" + persona.trim();
@@ -2521,6 +2528,21 @@ function openPersonaModal(){
   document.getElementById("personaText").value = convo ? (convo.persona||"") : "";
   openModal("personaModal");
 }
+/* 知识库开关 */
+function renderKbToggle(){
+  const btn = document.getElementById("kbToggleBtn");
+  if(useKb){
+    btn.classList.add("on"); btn.classList.remove("off");
+    btn.textContent = "库 ✓";
+  }else{
+    btn.classList.add("off"); btn.classList.remove("on");
+    btn.textContent = "库 ✕";
+  }
+}
+document.getElementById("kbToggleBtn").addEventListener("click",()=>{
+  useKb = !useKb;
+  renderKbToggle();
+});
 document.getElementById("personaBtn").addEventListener("click", openPersonaModal);
 document.getElementById("personaCancel").addEventListener("click",()=>closeModal("personaModal"));
 document.getElementById("personaModal").addEventListener("click",e=>{
