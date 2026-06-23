@@ -3304,34 +3304,21 @@ document.querySelectorAll(".fav-tab").forEach(tab=>{
   });
 });
 
-/* ---------- PWA：内联 manifest，保持单文件分发 ---------- */
+/* ---------- PWA：外部 manifest + service worker，支持离线打开 ---------- */
 (function setupPWA(){
-  const ICON = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMGM1YjVlIi8+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjNlZmU2IiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGNpcmNsZSBjeD0iOTAiIGN5PSI1OCIgcj0iMTYiLz48Y2lyY2xlIGN4PSI1NCIgY3k9IjEwNCIgcj0iMTQiLz48Y2lyY2xlIGN4PSIxMjYiIGN5PSIxMDQiIHI9IjE0Ii8+PGNpcmNsZSBjeD0iOTAiIGN5PSIxNDAiIHI9IjEzIi8+PHBhdGggZD0iTTkwIDc0djI2TTc4IDY4IDY0IDkyTTEwMiA2OCAxMTYgOTJNNjYgMTE2bDIwIDE4TTExNCAxMTYgOTQgMTM0Ii8+PC9nPjwvc3ZnPg==";
-  const pageUrl = location.href.split("#")[0].split("?")[0];
-  const dirUrl  = pageUrl.slice(0, pageUrl.lastIndexOf("/") + 1);
-  const manifest = {
-    name: "神经内科知识库",
-    short_name: "神内知识库",
-    description: "个人神经内科查询助手",
-    start_url: pageUrl,
-    scope: dirUrl,
-    display: "standalone",
-    orientation: "portrait",
-    background_color: "#f3efe6",
-    theme_color: "#f6f5f2",
-    icons: [
-      { src: ICON, sizes: "any", type: "image/svg+xml", purpose: "any" },
-      { src: ICON, sizes: "any", type: "image/svg+xml", purpose: "maskable" }
-    ]
-  };
+  // 引用同目录下的 manifest（带 neuro 后缀，避免与其他项目混淆）
   try{
-    const dataUri = "data:application/manifest+json," +
-                    encodeURIComponent(JSON.stringify(manifest));
     const link = document.createElement("link");
     link.rel = "manifest";
-    link.href = dataUri;
+    link.href = "manifest-neuro.json";
     document.head.appendChild(link);
   }catch(e){}
+  // 注册 service worker：把 App 缓存到本地，断网也能打开
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", ()=>{
+      navigator.serviceWorker.register("sw-neuro.js").catch(()=>{});
+    });
+  }
 })();
 
 init();
