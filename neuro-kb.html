@@ -94,6 +94,31 @@
   .src .tag{background:var(--accent-soft);color:var(--accent);
     padding:3px 9px;border-radius:7px;font-size:11px;font-weight:600;}
 
+  /* 引用角标 */
+  .cite-mark{display:inline-flex;align-items:center;justify-content:center;
+    min-width:15px;height:15px;padding:0 3px;margin:0 1px;vertical-align:super;
+    font-size:10px;font-weight:700;line-height:1;border-radius:5px;
+    background:var(--accent-soft);color:var(--accent);cursor:pointer;
+    transition:background .15s var(--ease),transform .1s var(--ease);
+    user-select:none;}
+  .cite-mark:active{transform:scale(.86);background:var(--accent);color:#fff;}
+  /* 引用浮窗 */
+  .cite-mask{position:fixed;inset:0;background:transparent;z-index:60;}
+  .cite-pop{position:fixed;z-index:61;width:min(82vw,340px);
+    background:var(--card);border-radius:14px;box-shadow:var(--shadow-lift);
+    padding:13px 15px;animation:citeIn .16s var(--ease);}
+  @keyframes citeIn{from{opacity:0;transform:translateY(4px) scale(.98);}to{opacity:1;transform:none;}}
+  .cite-head{font-size:12.5px;font-weight:700;color:var(--accent);
+    margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid var(--line);}
+  .cite-body{font-size:13.5px;line-height:1.62;color:var(--ink);
+    white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow-y:auto;
+    -webkit-overflow-scrolling:touch;}
+  .cite-foot{margin-top:9px;display:flex;justify-content:flex-end;}
+  .cite-full-btn{border:none;background:var(--accent-soft);color:var(--accent);
+    font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:8px;
+    cursor:pointer;font-family:var(--sans);}
+  .cite-full-btn:active{background:var(--accent);color:#fff;}
+
   /* 消息底部操作栏：复制 / 编辑 */
   .msg-acts{display:flex;gap:14px;margin-top:6px;opacity:.7;}
   .msg.user .msg-acts{align-self:flex-end;}
@@ -1597,16 +1622,21 @@ function retrieve(query){
 
 /* ---------- 提示词 ---------- */
 function buildSystemPrompt(used, persona){
-  let p = "你是一位严谨的神经内科知识助手，服务对象是一名神经内科医生。";
+  let p = "你是一位严谨的神经内科知识助手，服务对象是一名神经内科医生（专业同行，无需科普铺垫）。\n\n"
+        + "【输出要求】\n"
+        + "1. 结论先行：开头第一句直接给出核心答案或临床判断，再展开依据，不要先铺定义、分类、背景。\n"
+        + "2. 控制颗粒度：只答被问到的点，不做无关延伸。涉及剂量、指征、阈值、分级等关键信息时给出具体数值，不含糊。\n"
+        + "3. 简洁：删去同行已知的常识性铺陈；能一句说清不写一段。\n";
   if(used.length){
-    p += "回答时，请把下面的【知识库摘录】作为补充参考，规则如下：\n"
-       + "1. 完整、专业地回答用户的问题，该讲的通用医学知识要讲全，不要因为知识库未提及就省略或回避。\n"
-       + "2. 如果知识库摘录里有与问题相关的内容，把它结合进回答，并在相应位置用「条目标题」标注来源。\n"
-       + "3. 知识库摘录可能只与问题部分相关、甚至关联很弱；这种情况下以通用医学知识为主作答即可，不必强行套用知识库内容。\n"
-       + "4. 不得编造知识库中不存在的内容，但通用医学知识可正常使用。回答简洁、专业、准确。\n\n【知识库摘录（仅供参考）】\n";
-    used.forEach((e,i)=>{ p += `〔${i+1}〕${e.title||"无标题"}\n${e.content||""}\n\n`; });
+    p += "4. 知识库使用规则：下面附有【知识库摘录】，是医生本人录入的私有资料。\n"
+       + "   - 先用通用医学知识完整作答，不要因为知识库未提及就省略。\n"
+       + "   - 当某句话的依据来自某条摘录时，在该句末尾紧贴着标注其编号，格式为半角方括号，如 [1]；若一句同时依据多条，写作 [1][2]。编号必须对应下方摘录的序号，不得编造或错标。\n"
+       + "   - 只在确实引用了摘录内容的句子后标注；纯通用知识的句子不要标。\n"
+       + "   - 摘录可能只与问题弱相关甚至无关，此时以通用知识为主，不必强行套用、也不必标注。\n"
+       + "   - 不得编造知识库中不存在的内容。\n\n【知识库摘录】\n";
+    used.forEach((e,i)=>{ p += `[${i+1}] ${e.title||"无标题"}\n${e.content||""}\n\n`; });
   }else{
-    p += "请基于通用医学知识，完整、专业、准确地回答问题。";
+    p += "4. 请基于通用医学知识作答。";
   }
   if(persona && persona.trim()){
     p += "\n\n【本次对话的回复偏好】\n在不违反上述规则的前提下，请尽量遵循以下偏好：\n" + persona.trim();
@@ -1830,6 +1860,149 @@ function msgText(c){ return (typeof c==="string") ? c : (c && c.text || ""); }
 function msgImgs(c){ return (c && typeof c==="object" && c.images) ? c.images : []; }
 
 /* 渲染一条消息。logIndex 为它在 convo.log 中的下标（-1 表示临时消息，无操作栏） */
+/* ---------- 引用角标：前端从知识库原文截取相关段 ---------- */
+
+/* 把整条原文按中文/英文句末标点切成句子（保留标点） */
+function splitSentences(text){
+  const t = (text||"").replace(/\r/g,"");
+  // 在句末标点后切分；换行也作为天然分隔
+  const parts = t.split(/(?<=[。！？!?；;\n])/);
+  return parts.map(s=>s.trim()).filter(s=>s.length>0);
+}
+
+/* 给定一句引用文字，在某条原文里定位最相关的一段（命中句±前后各一句） */
+function extractSnippet(content, citingSentence){
+  const sents = splitSentences(content);
+  if(sents.length===0) return (content||"").slice(0,200);
+  if(sents.length<=3) return sents.join("");   // 原文本就很短，整条给出
+
+  const toks = queryTokens(citingSentence);
+  if(toks.length===0) return sents.slice(0,3).join("");
+
+  // 每句按 token 命中数打分
+  let best=-1, bestScore=0;
+  sents.forEach((s,i)=>{
+    const low = s.toLowerCase();
+    let sc=0;
+    toks.forEach(tk=>{ if(low.includes(tk)) sc++; });
+    if(sc>bestScore){ bestScore=sc; best=i; }
+  });
+  if(best<0) return sents.slice(0,3).join("");   // 一句都没命中，给开头三句兜底
+
+  const from = Math.max(0, best-1);
+  const to = Math.min(sents.length, best+2);     // 命中句 + 前1 + 后1
+  let seg = sents.slice(from,to).join("");
+  if(from>0) seg = "…" + seg;
+  if(to<sents.length) seg = seg + "…";
+  return seg;
+}
+
+/* 关闭当前浮窗 */
+function closeCitePop(){
+  const old = document.getElementById("citePop");
+  if(old) old.remove();
+  const mask = document.getElementById("citeMask");
+  if(mask) mask.remove();
+  document.removeEventListener("keydown", citeEscHandler);
+}
+function citeEscHandler(e){ if(e.key==="Escape") closeCitePop(); }
+
+/* 点击角标：弹出该条目的相关原文段 */
+function showCitePop(anchorEl, src, citingSentence){
+  closeCitePop();
+  const mask = document.createElement("div");
+  mask.id = "citeMask";
+  mask.className = "cite-mask";
+  mask.addEventListener("click", closeCitePop);
+  document.body.appendChild(mask);
+
+  const pop = document.createElement("div");
+  pop.id = "citePop";
+  pop.className = "cite-pop";
+
+  const head = document.createElement("div");
+  head.className = "cite-head";
+  head.textContent = src.title || "无标题条目";
+  pop.appendChild(head);
+
+  const body = document.createElement("div");
+  body.className = "cite-body";
+  body.textContent = extractSnippet(src.content||"", citingSentence||"");
+  pop.appendChild(body);
+
+  const foot = document.createElement("div");
+  foot.className = "cite-foot";
+  const full = document.createElement("button");
+  full.className = "cite-full-btn";
+  full.textContent = "看完整条目";
+  full.addEventListener("click", ()=>{
+    body.textContent = src.content || "（该条目无正文）";
+    foot.style.display = "none";
+  });
+  foot.appendChild(full);
+  pop.appendChild(foot);
+
+  document.body.appendChild(pop);
+  document.addEventListener("keydown", citeEscHandler);
+
+  // 定位：默认在角标下方，超出视口则上移
+  const r = anchorEl.getBoundingClientRect();
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  let left = r.left + r.width/2 - pw/2;
+  left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+  let top = r.bottom + 6;
+  if(top + ph > window.innerHeight - 8) top = r.top - ph - 6;
+  if(top < 8) top = 8;
+  pop.style.left = left + "px";
+  pop.style.top = top + "px";
+}
+
+/* 把含 [n] 标记的文本渲染进容器：普通文字走 textNode，[n] 渲染成可点角标
+   找不到对应来源的 [n] 原样保留为文字。citingSentence 取标记所在的句子片段 */
+function renderWithCitations(container, text, sources){
+  container.textContent = "";
+  if(!sources || !sources.length){ container.textContent = text; return; }
+  const re = /\[(\d{1,2})\]/g;
+  let last = 0, m;
+  while((m = re.exec(text)) !== null){
+    const n = parseInt(m[1],10);
+    const src = sources[n-1];
+    // 标记前的普通文字
+    if(m.index > last) container.appendChild(document.createTextNode(text.slice(last, m.index)));
+    if(src){
+      // 取该标记所在句子（往前回溯到句末标点）作为定位线索
+      const before = text.slice(0, m.index);
+      const segStart = Math.max(
+        before.lastIndexOf("。"), before.lastIndexOf("！"), before.lastIndexOf("？"),
+        before.lastIndexOf("\n"), before.lastIndexOf("；"), before.lastIndexOf("."),
+        before.lastIndexOf("!"), before.lastIndexOf("?")
+      );
+      const citing = before.slice(segStart+1);
+      const sup = document.createElement("sup");
+      sup.className = "cite-mark";
+      sup.textContent = n;
+      sup.title = src.title || "";
+      sup.addEventListener("click",(ev)=>{ ev.stopPropagation(); showCitePop(sup, src, citing); });
+      container.appendChild(sup);
+    }else{
+      // 没有对应来源，原样保留
+      container.appendChild(document.createTextNode(m[0]));
+    }
+    last = re.lastIndex;
+  }
+  if(last < text.length) container.appendChild(document.createTextNode(text.slice(last)));
+}
+
+/* 复制时剥掉有效角标 [n]（n 在来源范围内），正文里其它方括号不动 */
+function stripCitations(text, sources){
+  if(!sources || !sources.length) return text;
+  const max = sources.length;
+  return text.replace(/\[(\d{1,2})\]/g, (full, d)=>{
+    const n = parseInt(d,10);
+    return (n>=1 && n<=max) ? "" : full;
+  });
+}
+
 function addMsg(role, content, sources, logIndex){
   const empty = document.getElementById("chatEmpty");
   if(empty) empty.remove();
@@ -1857,7 +2030,11 @@ function addMsg(role, content, sources, logIndex){
 
   const bubble = document.createElement("div");
   bubble.className = "bubble" + (role==="err"?" err":"");
-  bubble.textContent = msgText(content);
+  if(role!=="user" && role!=="err" && sources && sources.length){
+    renderWithCitations(bubble, msgText(content), sources);
+  }else{
+    bubble.textContent = msgText(content);
+  }
   div.appendChild(bubble);
 
   if(sources && sources.length){
@@ -1902,7 +2079,7 @@ function addMsg(role, content, sources, logIndex){
     const copyBtn = document.createElement("button");
     copyBtn.textContent = "复制";
     copyBtn.addEventListener("click",()=>{
-      const txt = msgText(content);
+      const txt = stripCitations(msgText(content), sources);
       const done = ()=>{ copyBtn.textContent="已复制"; setTimeout(()=>copyBtn.textContent="复制",1500); };
       if(navigator.clipboard && navigator.clipboard.writeText){
         navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));
@@ -2107,9 +2284,11 @@ async function runTurn(convo, used){
       bubble.textContent = acc;
       followScroll();
     }, convo.provider, abortCtrl.signal);
+    // 流式结束：用最终文本重渲染一次，把 [n] 变成可点角标
+    if(bubble) renderWithCitations(bubble, answer, used.map(e=>({title:e.title,content:e.content||""})));
     if(!bubble){ removeTyping(); addMsg("bot", answer, used, convo.log.length); }
     convo.log.push({ role:"bot", content:answer,
-      sources:used.map(e=>({title:e.title})),
+      sources:used.map(e=>({title:e.title,content:e.content||""})),
       versions:[answer], activeVer:0 });
     saveConvos();
     maybeOfferCompress(convo);
@@ -2120,7 +2299,7 @@ async function runTurn(convo, used){
       if(last && last.textContent.trim()){
         const txt = last.textContent;
         convo.log.push({ role:"bot", content:txt,
-          sources:used.map(e=>({title:e.title})), versions:[txt], activeVer:0 });
+          sources:used.map(e=>({title:e.title,content:e.content||""})), versions:[txt], activeVer:0 });
       }
       saveConvos();
     }else{

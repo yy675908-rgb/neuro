@@ -1,5 +1,5 @@
 /* 神内知识库 Service Worker —— 离线缓存，断网也能打开 */
-const CACHE = "neuro-kb-v2";
+const CACHE = "neuro-kb-v3";
 /* 需要缓存的本地核心文件（相对 sw 所在目录） */
 const CORE = ["neuro-kb.html", "manifest-neuro.json", "icon-192-neuro.png", "icon-512-neuro.png"];
 
