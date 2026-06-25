@@ -1,13 +1,13 @@
 {
-  "name": "神经内科知识库",
-  "short_name": "神内知识库",
-  "description": "个人神经内科查询助手",
+  "name": "知识库",
+  "short_name": "知识库",
+  "description": "个人知识库查询助手",
   "start_url": "./neuro-kb.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0c5b5e",
-  "theme_color": "#0c5b5e",
+  "background_color": "#fcfcfb",
+  "theme_color": "#157a83",
   "icons": [
     {
       "src": "./icon-192-neuro.png",
@@ -22,7 +22,7 @@
       "purpose": "any"
     },
     {
-      "src": "./icon-512-neuro.png",
+      "src": "./icon-512-neuro-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

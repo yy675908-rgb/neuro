@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<title>神经内科知识库</title>
+<title>知识库</title>
 
 <!-- PWA：独立运行所需的系统标识 -->
-<meta name="theme-color" content="#f6f5f2">
+<meta name="theme-color" content="#fcfcfb">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="神内知识库">
+<meta name="apple-mobile-web-app-title" content="知识库">
 <!-- iOS 主屏图标（内联 SVG，base64） -->
 <link rel="apple-touch-icon" href="./icon-192-neuro.png">
 
@@ -587,7 +587,7 @@
       <div class="field">
         <label>应用名称</label>
         <div class="desc">显示在桌面图标和应用内的名字。不限于神经内科，可按你的用途修改。</div>
-        <input type="text" id="appName" placeholder="神经内科知识库" maxlength="20">
+        <input type="text" id="appName" placeholder="知识库" maxlength="20">
       </div>
       <div class="field">
         <label>对话中的称呼</label>
@@ -878,7 +878,7 @@ const KBStore = {
 /* ---------- 状态 ---------- */
 let settings = { provider:"claude", keys:{}, models:{}, customBase:"",
                  defaultPersona:"", userName:"我", botName:"助手",
-                 appName:"神经内科知识库" };
+                 appName:"知识库" };
 let knowledge = [];
 let conversations = [];     // 多个对话，每个 {id,title,createdAt,log,persona,provider}
 let currentId = null;       // 当前打开的对话 id
@@ -928,13 +928,13 @@ async function init(){
         if(o.model) settings.models[settings.provider] = o.model;
       }else{
         settings = Object.assign({provider:"claude",keys:{},models:{},customBase:"",
-          defaultPersona:"",userName:"我",botName:"助手",appName:"神经内科知识库"}, o);
+          defaultPersona:"",userName:"我",botName:"助手",appName:"知识库"}, o);
       }
     }catch(e){}
   }
   if(!settings.userName) settings.userName = "我";
   if(!settings.botName) settings.botName = "助手";
-  if(!settings.appName) settings.appName = "神经内科知识库";
+  if(!settings.appName) settings.appName = "知识库";
 
   // 知识库：从 IndexedDB 读取
   knowledge = await KBStore.getEntries();
@@ -1045,7 +1045,7 @@ function captureFields(){
   settings.defaultPersona = document.getElementById("defaultPersona").value;
   settings.userName = document.getElementById("userName").value.trim() || "我";
   settings.botName = document.getElementById("botName").value.trim() || "助手";
-  settings.appName = document.getElementById("appName").value.trim() || "神经内科知识库";
+  settings.appName = document.getElementById("appName").value.trim() || "知识库";
 }
 /* 更新模型名显示框的文字 */
 function refreshModelNameBox(){
@@ -1092,7 +1092,7 @@ document.getElementById("saveSetBtn").addEventListener("click", async ()=>{
 
 /* 应用名称：写到文档标题 */
 function applyAppName(){
-  const name = (settings.appName||"").trim() || "神经内科知识库";
+  const name = (settings.appName||"").trim() || "知识库";
   document.title = name;
 }
 
@@ -3340,7 +3340,7 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
     const a = document.createElement("a");
     const stamp = new Date().toISOString().slice(0,10);
     a.href = url;
-    a.download = "神内知识库备份-" + stamp + ".json";
+    a.download = "知识库备份-" + stamp + ".json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -3458,7 +3458,7 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
       if(dump.currentId) currentId = dump.currentId;
       if(!settings.userName) settings.userName = "我";
       if(!settings.botName) settings.botName = "助手";
-      if(!settings.appName) settings.appName = "神经内科知识库";
+      if(!settings.appName) settings.appName = "知识库";
       conversations.forEach(c=>{ if(!c.provider) c.provider = settings.provider||"claude"; if(!c.pinned) c.pinned = 0; if(!c.favorite) c.favorite = 0; if(!c.pdfs) c.pdfs = []; });
       if(conversations.length===0) conversations.push(newConvoObj());
       if(!curConvo()) currentId = conversations[0].id;

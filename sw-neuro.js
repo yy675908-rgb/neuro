@@ -1,7 +1,7 @@
 /* 神内知识库 Service Worker —— 离线缓存，断网也能打开 */
-const CACHE = "neuro-kb-v4";
+const CACHE = "neuro-kb-v5";
 /* 需要缓存的本地核心文件（相对 sw 所在目录） */
-const CORE = ["neuro-kb.html", "manifest-neuro.json", "icon-192-neuro.png", "icon-512-neuro.png"];
+const CORE = ["neuro-kb.html", "manifest-neuro.json", "icon-192-neuro.png", "icon-512-neuro.png", "icon-512-neuro-maskable.png"];
 
 /* 安装：把核心文件逐个存进缓存（个别失败不影响整体） */
 self.addEventListener("install", (e)=>{
