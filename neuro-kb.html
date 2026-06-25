@@ -88,7 +88,31 @@
     border-bottom-right-radius:6px;max-width:86%;}
   .msg.bot .bubble{background:var(--card);box-shadow:var(--shadow);
     border-bottom-left-radius:6px;}
-  .msg.bot .bubble.err{background:#f8ece7;color:var(--warn);box-shadow:none;}
+  /* bot 气泡内部由块级元素控制排版，取消 pre-wrap 以免间距叠加 */
+  .msg.bot .bubble{white-space:normal;}
+  /* 流式打字过程中临时保留换行 */
+  .msg.bot .bubble.streaming{white-space:pre-wrap;}
+  .msg.bot .bubble.err{background:#f8ece7;color:var(--warn);box-shadow:none;
+    white-space:pre-wrap;}
+
+  /* Markdown 排版 */
+  .md-p{margin:0;}
+  .md-p + .md-p{margin-top:9px;}            /* 段间距 */
+  .md-h{font-weight:700;line-height:1.4;margin:14px 0 6px;}
+  .md-h:first-child{margin-top:0;}
+  .md-h1{font-size:17px;}
+  .md-h2{font-size:16px;}
+  .md-h3{font-size:15.5px;color:var(--accent);}
+  .md-h4{font-size:15px;color:var(--accent);}
+  .md-ul{margin:7px 0;padding-left:2px;list-style:none;}
+  .md-ul li{position:relative;padding-left:15px;margin:3px 0;line-height:1.62;}
+  .md-ul li::before{content:"·";position:absolute;left:3px;top:-1px;
+    color:var(--accent);font-weight:700;}
+  .md-hr{height:1px;background:var(--line);margin:13px 0;border:none;}
+  /* 块级元素之间、与角标的衔接 */
+  .bubble .md-p:first-child,.bubble .md-ul:first-child{margin-top:0;}
+  .bubble strong{font-weight:700;}
+
   .src{margin-top:8px;font-size:11.5px;color:var(--muted);
     display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
   .src .tag{background:var(--accent-soft);color:var(--accent);
@@ -1626,17 +1650,18 @@ function buildSystemPrompt(used, persona){
         + "【输出要求】\n"
         + "1. 结论先行：开头第一句直接给出核心答案或临床判断，再展开依据，不要先铺定义、分类、背景。\n"
         + "2. 控制颗粒度：只答被问到的点，不做无关延伸。涉及剂量、指征、阈值、分级等关键信息时给出具体数值，不含糊。\n"
-        + "3. 简洁：删去同行已知的常识性铺陈；能一句说清不写一段。\n";
+        + "3. 简洁：删去同行已知的常识性铺陈；能一句说清不写一段。\n"
+        + "4. 格式：少用 Markdown 标记。允许用「- 」做列表、用空行分段；尽量不用 ###、不用 ** 加粗、不用 --- 分割线，用自然语言和分段来组织即可。\n";
   if(used.length){
-    p += "4. 知识库使用规则：下面附有【知识库摘录】，是医生本人录入的私有资料。\n"
+    p += "5. 知识库使用规则：下面附有【知识库摘录】，是医生本人录入的私有资料。\n"
        + "   - 先用通用医学知识完整作答，不要因为知识库未提及就省略。\n"
-       + "   - 当某句话的依据来自某条摘录时，在该句末尾紧贴着标注其编号，格式为半角方括号，如 [1]；若一句同时依据多条，写作 [1][2]。编号必须对应下方摘录的序号，不得编造或错标。\n"
+       + "   - 当某句话的依据来自某条摘录时，在该句末尾紧贴着标注其编号，必须用半角方括号，如 [1]；若一句同时依据多条，写作 [1][2]。务必用半角 [ ]，不要用全角〔〕或其它括号。编号必须对应下方摘录的序号，不得编造或错标。\n"
        + "   - 只在确实引用了摘录内容的句子后标注；纯通用知识的句子不要标。\n"
        + "   - 摘录可能只与问题弱相关甚至无关，此时以通用知识为主，不必强行套用、也不必标注。\n"
        + "   - 不得编造知识库中不存在的内容。\n\n【知识库摘录】\n";
     used.forEach((e,i)=>{ p += `[${i+1}] ${e.title||"无标题"}\n${e.content||""}\n\n`; });
   }else{
-    p += "4. 请基于通用医学知识作答。";
+    p += "5. 请基于通用医学知识作答。";
   }
   if(persona && persona.trim()){
     p += "\n\n【本次对话的回复偏好】\n在不违反上述规则的前提下，请尽量遵循以下偏好：\n" + persona.trim();
@@ -1957,47 +1982,125 @@ function showCitePop(anchorEl, src, citingSentence){
   pop.style.top = top + "px";
 }
 
-/* 把含 [n] 标记的文本渲染进容器：普通文字走 textNode，[n] 渲染成可点角标
-   找不到对应来源的 [n] 原样保留为文字。citingSentence 取标记所在的句子片段 */
-function renderWithCitations(container, text, sources){
-  container.textContent = "";
-  if(!sources || !sources.length){ container.textContent = text; return; }
-  const re = /\[(\d{1,2})\]/g;
-  let last = 0, m;
-  while((m = re.exec(text)) !== null){
-    const n = parseInt(m[1],10);
-    const src = sources[n-1];
-    // 标记前的普通文字
-    if(m.index > last) container.appendChild(document.createTextNode(text.slice(last, m.index)));
-    if(src){
-      // 取该标记所在句子（往前回溯到句末标点）作为定位线索
-      const before = text.slice(0, m.index);
-      const segStart = Math.max(
-        before.lastIndexOf("。"), before.lastIndexOf("！"), before.lastIndexOf("？"),
-        before.lastIndexOf("\n"), before.lastIndexOf("；"), before.lastIndexOf("."),
-        before.lastIndexOf("!"), before.lastIndexOf("?")
-      );
-      const citing = before.slice(segStart+1);
-      const sup = document.createElement("sup");
-      sup.className = "cite-mark";
-      sup.textContent = n;
-      sup.title = src.title || "";
-      sup.addEventListener("click",(ev)=>{ ev.stopPropagation(); showCitePop(sup, src, citing); });
-      container.appendChild(sup);
-    }else{
-      // 没有对应来源，原样保留
-      container.appendChild(document.createTextNode(m[0]));
-    }
-    last = re.lastIndex;
+/* 行内渲染：把一段纯文字写进父节点，处理 **粗体** 和 角标[n]/〔n〕
+   citingBase 是这段之前的全部文本，用于给角标定位所在句子 */
+function renderInline(parent, text, sources, citingBase){
+  // 先按 **粗体** 切片，再在每片里找角标
+  const boldRe = /\*\*([^*]+)\*\*/g;
+  let idx = 0, bm;
+  const pieces = [];   // {bold:bool, text:string, offset:本片在 text 中的起点}
+  while((bm = boldRe.exec(text)) !== null){
+    if(bm.index > idx) pieces.push({bold:false, text:text.slice(idx,bm.index), offset:idx});
+    pieces.push({bold:true, text:bm[1], offset:bm.index+2});
+    idx = boldRe.lastIndex;
   }
-  if(last < text.length) container.appendChild(document.createTextNode(text.slice(last)));
+  if(idx < text.length) pieces.push({bold:false, text:text.slice(idx), offset:idx});
+
+  pieces.forEach(pc=>{
+    const target = pc.bold ? document.createElement("strong") : parent;
+    // 在该片里找角标（半角[n]与全角〔n〕都认）
+    const citeRe = /[\[〔](\d{1,2})[\]〕]/g;
+    let last = 0, cm;
+    while((cm = citeRe.exec(pc.text)) !== null){
+      const n = parseInt(cm[1],10);
+      const src = sources && sources[n-1];
+      if(cm.index > last) target.appendChild(document.createTextNode(pc.text.slice(last, cm.index)));
+      if(src){
+        // 拼出角标之前的完整文本，回溯到句末标点取定位句
+        const before = citingBase + text.slice(0, pc.offset) + pc.text.slice(0, cm.index);
+        const segStart = Math.max(
+          before.lastIndexOf("。"), before.lastIndexOf("！"), before.lastIndexOf("？"),
+          before.lastIndexOf("\n"), before.lastIndexOf("；"), before.lastIndexOf("."),
+          before.lastIndexOf("!"), before.lastIndexOf("?")
+        );
+        const citing = before.slice(segStart+1);
+        const sup = document.createElement("sup");
+        sup.className = "cite-mark";
+        sup.textContent = n;
+        sup.title = src.title || "";
+        sup.addEventListener("click",(ev)=>{ ev.stopPropagation(); showCitePop(sup, src, citing); });
+        target.appendChild(sup);
+      }else{
+        target.appendChild(document.createTextNode(cm[0]));
+      }
+      last = citeRe.lastIndex;
+    }
+    if(last < pc.text.length) target.appendChild(document.createTextNode(pc.text.slice(last)));
+    if(pc.bold) parent.appendChild(target);
+  });
 }
 
-/* 复制时剥掉有效角标 [n]（n 在来源范围内），正文里其它方括号不动 */
+/* 富文本渲染：解析基础 Markdown（标题/列表/分割线/段落）+ 行内粗体 + 角标
+   纯文本内容一律走 textNode，杜绝 XSS。sources 可为空（无库时退化为纯排版）*/
+function renderRich(container, text, sources){
+  container.textContent = "";
+  const src = sources || [];
+  const lines = (text||"").replace(/\r/g,"").split("\n");
+  let citingBase = "";          // 已渲染过的文本累加，供角标定位
+  let listEl = null;            // 当前 <ul>，连续 - 项归入同一个
+
+  const flushList = ()=>{ listEl = null; };
+
+  lines.forEach(raw=>{
+    const line = raw.replace(/\s+$/,"");      // 去行尾空白
+    const trimmed = line.trim();
+
+    // 空行：结束列表，作为段落间距（CSS 控制，不插空节点）
+    if(trimmed===""){ flushList(); citingBase += "\n"; return; }
+
+    // 分割线 --- 或 ***
+    if(/^(-{3,}|\*{3,})$/.test(trimmed)){
+      flushList();
+      const hr = document.createElement("div");
+      hr.className = "md-hr";
+      container.appendChild(hr);
+      citingBase += "\n";
+      return;
+    }
+
+    // 标题 # ## ### …（最多取到 h4 视觉级别）
+    const hm = trimmed.match(/^(#{1,6})\s+(.*)$/);
+    if(hm){
+      flushList();
+      const level = Math.min(hm[1].length, 4);
+      const h = document.createElement("div");
+      h.className = "md-h md-h" + level;
+      renderInline(h, hm[2], src, citingBase);
+      container.appendChild(h);
+      citingBase += hm[2] + "\n";
+      return;
+    }
+
+    // 列表项 - xxx 或 * xxx（行首）
+    const lm = trimmed.match(/^[-*]\s+(.*)$/);
+    if(lm){
+      if(!listEl){
+        listEl = document.createElement("ul");
+        listEl.className = "md-ul";
+        container.appendChild(listEl);
+      }
+      const li = document.createElement("li");
+      renderInline(li, lm[1], src, citingBase);
+      listEl.appendChild(li);
+      citingBase += lm[1] + "\n";
+      return;
+    }
+
+    // 普通段落
+    flushList();
+    const p = document.createElement("div");
+    p.className = "md-p";
+    renderInline(p, line, src, citingBase);
+    container.appendChild(p);
+    citingBase += line + "\n";
+  });
+}
+
+/* 复制时剥掉有效角标 [n]/〔n〕（n 在来源范围内），正文里其它方括号不动 */
 function stripCitations(text, sources){
   if(!sources || !sources.length) return text;
   const max = sources.length;
-  return text.replace(/\[(\d{1,2})\]/g, (full, d)=>{
+  return text.replace(/[\[〔](\d{1,2})[\]〕]/g, (full, d)=>{
     const n = parseInt(d,10);
     return (n>=1 && n<=max) ? "" : full;
   });
@@ -2030,8 +2133,8 @@ function addMsg(role, content, sources, logIndex){
 
   const bubble = document.createElement("div");
   bubble.className = "bubble" + (role==="err"?" err":"");
-  if(role!=="user" && role!=="err" && sources && sources.length){
-    renderWithCitations(bubble, msgText(content), sources);
+  if(role!=="user" && role!=="err"){
+    renderRich(bubble, msgText(content), sources||[]);
   }else{
     bubble.textContent = msgText(content);
   }
@@ -2279,13 +2382,17 @@ async function runTurn(convo, used){
         removeTyping();
         const idx = convo.log.length;
         bubble = addMsg("bot", "", used, idx);
+        bubble.classList.add("streaming");   // 流式中保留换行
       }
       acc += piece;
       bubble.textContent = acc;
       followScroll();
     }, convo.provider, abortCtrl.signal);
-    // 流式结束：用最终文本重渲染一次，把 [n] 变成可点角标
-    if(bubble) renderWithCitations(bubble, answer, used.map(e=>({title:e.title,content:e.content||""})));
+    // 流式结束：移除流式态，用最终文本重渲染（Markdown 排版 + 角标）
+    if(bubble){
+      bubble.classList.remove("streaming");
+      renderRich(bubble, answer, used.map(e=>({title:e.title,content:e.content||""})));
+    }
     if(!bubble){ removeTyping(); addMsg("bot", answer, used, convo.log.length); }
     convo.log.push({ role:"bot", content:answer,
       sources:used.map(e=>({title:e.title,content:e.content||""})),
